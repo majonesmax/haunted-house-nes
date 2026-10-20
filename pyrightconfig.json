@@ -1,0 +1,13 @@
+{
+  "include": [
+    "tools",
+    "tests"
+  ],
+  "extraPaths": [
+    "tools",
+    "../haunted-house"
+  ],
+  "typeCheckingMode": "basic",
+  "venvPath": ".",
+  "venv": ".venv"
+}
