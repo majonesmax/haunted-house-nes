@@ -68,6 +68,19 @@ remaster's model of the original - every byte, every frame - so the rules are pr
 the screen or listens to the sound. The flashing, the ending's first frame in the wrong colours, and every
 game being the same game (the random numbers' seed) were all found by playing it.
 
+## 2026-10-20: The story over the dark; thunder after the title's lightning
+
+**Chose:** the story screen is black, with no lightning (as the remaster tells it); on the screens under the
+stormy sky - the title, game over, the help - a roll of thunder follows each flash a second later.
+
+**Why:** the story shared the title's sky colour and its flashes, and with no mansion or sky in sight a blue
+screen flashing looked like a fault. Thunder a moment after the flash says what the flash is; the delay
+puts the storm some way off, as the remaster's does (its shared/storm.py).
+
+**What else:** thunder with the flash itself (nearer, louder); an ambient storm through play too - not
+done, because in play the lightning is the original's warning that a monster is in the room, and weather
+would blur it.
+
 ## 2026-10-20: The browser page keeps EmulatorJS's 64 ms sound buffer
 
 **Chose:** leave EmulatorJS's audio buffer at its 64 ms, so the sound stays a little late. The page's patch that

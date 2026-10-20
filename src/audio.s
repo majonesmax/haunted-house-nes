@@ -34,6 +34,7 @@ VOLUMES_END = $FF
 CALM_FRAMES = 120         ; the tension music keeps on this long after the last monster has gone
 STEP_EVERY = 14           ; frames of walking between footsteps
 THUNDER_GAP = 90          ; one roll of thunder per strike, though lightning flickers
+TITLE_THUNDER_DELAY = 60  ; frames from the title's lightning to its thunder: the storm is some way off
 
 ; --- the voices --------------------------------------------------------------------------------------
 set_up_sound:
@@ -64,6 +65,7 @@ set_up_sound:
 audio_frame:
     jsr choose_song
     jsr hear_events
+    jsr hear_title_storm
     ldx #0
 @voice:
     jsr use_song_bank     ; the song's streams may be in the second music bank...
@@ -559,6 +561,26 @@ choose_song:
     ldx floor
     lda floor_songs, x
     jmp start_song
+
+; --- the title's storm ---------------------------------------------------------------------------------
+; On the screens under the stormy sky (the title, game over, the help: screens.s title_lightning), thunder
+; rolls a moment after each flash.
+hear_title_storm:
+    lda screen_shown
+    cmp #SCREEN_TITLE
+    beq @under_the_sky
+    cmp #SCREEN_GAME_OVER
+    beq @under_the_sky
+    cmp #SCREEN_HELP
+    bne @done
+@under_the_sky:
+    jsr title_storm_frame
+    cmp #TITLE_THUNDER_DELAY
+    bne @done
+    lda #EFFECT_THUNDER
+    jmp start_effect_sound
+@done:
+    rts
 
 ; --- what just happened --------------------------------------------------------------------------------
 ; Effects for what's changed since last frame (the remaster's music/events.py).

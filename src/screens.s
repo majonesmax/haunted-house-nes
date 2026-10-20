@@ -1261,9 +1261,15 @@ full_screen_palettes:
     lda screen_shown
     cmp #SCREEN_ENDING
     beq @ending
+    cmp #SCREEN_STORY
+    beq @story
     jsr title_lightning   ; the sky flashes now and then
     bcc @done
     lda #TITLE_FLASH
+    sta palette_buffer
+    rts
+@story:                   ; the story is told over the dark (the remaster's), with no lightning: with no
+    lda #BLACK_COLOUR     ; mansion or sky in sight, a flash looked like a fault
     sta palette_buffer
     rts
 @ending:
@@ -1290,6 +1296,18 @@ full_screen_palettes:
 
 ; Out: carry set on the title's lightning frames: 4 in every 330.
 title_lightning:
+    jsr title_storm_frame
+    cmp #TITLE_LIGHTNING_FRAMES
+    bcc @flash
+    clc
+    rts
+@flash:
+    sec
+    rts
+
+; Out: A = how far into the title's storm cycle this frame is, 0-329 (its lightning strikes at 0; the sound
+; rolls its thunder a moment after).
+title_storm_frame:
     lda screen_frames
     sta work_0
     lda screen_frames + 1
@@ -1307,12 +1325,6 @@ title_lightning:
     jmp @modulo
 @found:
     lda work_0
-    cmp #TITLE_LIGHTNING_FRAMES
-    bcc @flash
-    clc
-    rts
-@flash:
-    sec
     rts
 
 ; In: A = rows. The background palettes that many palette rows lighter (black stays black), the way NES
