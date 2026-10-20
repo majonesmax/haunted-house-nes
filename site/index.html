@@ -7,30 +7,48 @@
   <meta name="description" content="Atari 2600 Haunted House, rule for rule, as a native NES game - play it in your browser.">
   <style>
     :root {
-      --background: #0b0b14;
-      --panel: #151526;
-      --text: #e8e6f0;
-      --muted: #9a98b0;
-      --accent: #f2b33d;
-      --line: #2a2a44;
+      /* A Halloween dressing for the season: pumpkin orange on a deep purple night. */
+      --background: #0e0816;
+      --panel: #1a1028;
+      --text: #ece6f2;
+      --muted: #a79bbd;
+      --accent: #ff8f2a;
+      --line: #35254d;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       background: var(--background);
+      background-image: radial-gradient(ellipse 60% 40% at 80% -10%, #2a1744 0%, transparent 70%);
       color: var(--text);
       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
     }
-    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    main { max-width: 1320px; margin: 0 auto; padding: 24px 16px 48px; }
+    header { position: relative; padding-right: 180px; }
     h1 { margin: 0 0 4px; font-size: 1.8rem; letter-spacing: 0.02em; }
-    h1 span { color: var(--accent); }
+    h1 span { color: var(--accent); text-shadow: 0 0 18px rgba(255, 143, 42, 0.45); }
+    /* The moon and bats, drawn in the page itself. */
+    .night { position: absolute; right: 0; top: -8px; width: 170px; height: 80px; pointer-events: none; }
+    .night .bat { animation: flutter 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .night .bat.b2 { animation-duration: 2.6s; animation-delay: -1s; }
+    .night .bat.b3 { animation-duration: 3.8s; animation-delay: -2s; }
+    @keyframes flutter { 0%, 100% { translate: 0 0; rotate: -6deg; } 50% { translate: 0 -5px; rotate: 6deg; } }
+    @media (prefers-reduced-motion: reduce) { .night .bat { animation: none; } }
+    @media (max-width: 560px) { header { padding-right: 0; } .night { display: none; } }
+    .season { display: inline-block; margin-left: 8px; padding: 1px 10px; border: 1px solid var(--accent);
+      border-radius: 999px; color: var(--accent); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; }
     .tagline { margin: 0 0 20px; color: var(--muted); }
-    .layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr); gap: 20px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 20px; align-items: start; }
     @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
     #game-frame {
       position: relative;
-      width: 100%;
-      aspect-ratio: 256 / 240;
+      /* The whole NES picture: 256 x 240, at the core's 8:7 pixel aspect, so no bars - and as big as the
+         window allows, keeping room for the heading above (fullscreen is in the emulator's own bar). */
+      --picture-aspect: calc(256 * 8 / 7 / 240);
+      --room-for-heading: 120px;
+      width: min(100%, calc((100vh - var(--room-for-heading)) * var(--picture-aspect)));
+      min-width: min(100%, 480px);
+      aspect-ratio: var(--picture-aspect);
       background: #000;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -54,8 +72,27 @@
 </head>
 <body>
   <main>
-    <h1>Haunted House: <span>By Matchlight</span></h1>
-    <p class="tagline">Atari 2600 <em>Haunted House</em>, rule for rule, as a native NES game - in a new mansion with a cellar and four floors.</p>
+    <header>
+      <h1>Haunted House: <span>By Matchlight</span></h1>
+      <p class="tagline">Atari 2600 <em>Haunted House</em>, rule for rule, as a native NES game - in a new mansion with a cellar and four floors.
+        <span class="season">Happy Halloween</span></p>
+      <svg class="night" viewBox="0 0 170 80" aria-hidden="true">
+        <defs><radialGradient id="glow"><stop offset="60%" stop-color="#0e0816"/><stop offset="100%" stop-color="#1b1030"/></radialGradient></defs>
+        <!-- The moon: a disc with a bite of night taken out. -->
+        <circle cx="130" cy="38" r="26" fill="#f7e3a1" opacity="0.9"/>
+        <circle cx="140" cy="30" r="24" fill="url(#glow)"/>
+        <!-- Three bats: a body and two scalloped wings each. -->
+        <g class="bat b1" fill="#45306a">
+          <path d="M22 40 q6 -10 14 -4 q2 -5 6 0 q4 -6 14 4 q-6 2 -8 8 q-3 -4 -6 -1 q-3 -3 -6 1 q-2 -6 -8 -8z"/>
+        </g>
+        <g class="bat b2" fill="#45306a" transform="translate(50 12) scale(0.7)">
+          <path d="M22 40 q6 -10 14 -4 q2 -5 6 0 q4 -6 14 4 q-6 2 -8 8 q-3 -4 -6 -1 q-3 -3 -6 1 q-2 -6 -8 -8z"/>
+        </g>
+        <g class="bat b3" fill="#45306a" transform="translate(70 40) scale(0.55)">
+          <path d="M22 40 q6 -10 14 -4 q2 -5 6 0 q4 -6 14 4 q-6 2 -8 8 q-3 -4 -6 -1 q-3 -3 -6 1 q-2 -6 -8 -8z"/>
+        </g>
+      </svg>
+    </header>
     <div class="layout">
       <div id="game-frame"><div id="game"></div></div>
       <aside>
@@ -97,6 +134,9 @@
     EJS_color = "#f2b33d";
     EJS_backgroundColor = "#0b0b14";
     EJS_volume = 0.6;
+    // The whole picture. FCEUmm trims 8 rows off the top and bottom by default (the part an old TV hid), which
+    // cut off the game's bottom line of text.
+    EJS_defaultOptions = { fceumm_overscan_v_top: "0", fceumm_overscan_v_bottom: "0" };
     EJS_defaultControls = {
       0: {
         0: { value: "z", value2: "BUTTON_2" },
