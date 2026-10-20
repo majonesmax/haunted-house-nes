@@ -30,6 +30,18 @@ LIGHT_KEY_BYTES = 7
 .segment "CODE"
 
 prepare_picture:
+    jsr choose_screen
+    lda screen_wanted
+    beq @play
+    jmp prepare_full_screen
+@play:
+    lda screen_shown
+    beq @playing
+    lda #SCREEN_PLAY      ; back from a full screen: the floor is drawn again
+    sta screen_shown
+    lda #$FF
+    sta shown_floor
+@playing:
     lda floor
     cmp shown_floor
     beq @same_floor
@@ -56,6 +68,7 @@ prepare_picture:
 compose_frame:
     jsr compose_palettes
     jsr build_sprites
+    jsr won_lighten
     lda #3
     sta work_part
     jsr light_blocks
@@ -232,6 +245,9 @@ fill_row_buffer:
 start_drawing:
     lda floor
     sta shown_floor
+    asl                   ; its tile set: 1K banks floor * 4 on
+    asl
+    sta background_bank
     lda #1
     sta drawing
     lda #0

@@ -22,7 +22,11 @@ from screenshot import play
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LABELS = os.path.join(ROOT, "build", "haunted_house.labels")
 HEADER = 16
-PRG_START, PRG_SIZE = 0x8000, 0x8000
+PRG_START, PRG_SIZE = 0x8000, 0x10000
+BANK = 0x2000                # the MMC3's 8K program banks
+FIXED_BANKS = 6              # $C000 and $E000 hold the last two
+BANK_SELECT, BANK_DATA = 0x8000, 0x8001
+PROGRAM_8000, PROGRAM_A000 = 6, 7
 PPU_STATUS, VBLANK = 0x2002, 0x80
 CHIPS_END = 0x6000           # $2000-$5FFF: the PPU, the sound chip, the controllers
 SENTINEL = 0xFFF0            # a return address that ends a run
@@ -31,11 +35,15 @@ FRAME_CYCLES = 29780
 
 
 class Memory:
-    """The NES's memory as the 6502 sees it, without the chips: RAM (mirrored), the cartridge's program."""
+    """The NES's memory as the 6502 sees it, without the chips: RAM (mirrored), and the cartridge's program
+    through the MMC3's banks (bank 0 at $8000 and 1 at $A000 at first; writes to its registers switch
+    them, as on the board)."""
 
     def __init__(self, ram: bytes, program: bytes):
         self.ram = bytearray(ram)
         self.program = program
+        self.banks = [0, 1, FIXED_BANKS, FIXED_BANKS + 1]   # the bank in each 8K window from $8000
+        self.selected = 0
 
     def __getitem__(self, address: int | slice) -> int | list[int]:
         if isinstance(address, slice):
@@ -46,7 +54,8 @@ class Memory:
         if address < 0x2000:
             return self.ram[address & 0x7FF]
         if address >= PRG_START:
-            return self.program[address - PRG_START]
+            window = (address - PRG_START) // BANK
+            return self.program[self.banks[window] * BANK + (address - PRG_START) % BANK]
         return VBLANK if address == PPU_STATUS else 0
 
     def __setitem__(self, address: int | slice, value: int | list[int]) -> None:
@@ -56,6 +65,10 @@ class Memory:
             return
         if address < 0x2000:
             self.ram[address & 0x7FF] = value & 0xFF  # type: ignore[operator]
+        elif address == BANK_SELECT:
+            self.selected = int(value) & 7  # type: ignore[arg-type]
+        elif address == BANK_DATA and self.selected in (PROGRAM_8000, PROGRAM_A000):
+            self.banks[self.selected - PROGRAM_8000] = int(value)  # type: ignore[arg-type]
 
     def __len__(self) -> int:
         return 0x10000
@@ -100,7 +113,7 @@ def main() -> None:
     addresses = {name: address for address, name in names.items()}
     mpu = MPU(memory=Memory(bytes(machine.ram), program))  # type: ignore[arg-type]
     mpu.sp = 0xF0
-    for routine in ("game_frame", "prepare_picture"):
+    for routine in ("game_frame", "prepare_picture", "audio_frame"):
         totals = run_routine(mpu, addresses[routine], names)
         print(f"\n{routine}: {totals.get(routine, 0)} cycles of {FRAME_CYCLES}")
         for name, cycles in sorted(totals.items(), key=lambda item: -item[1])[:16]:

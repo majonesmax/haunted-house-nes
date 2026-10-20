@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, os.path.join(REMASTER, "tools"))
 sys.path.insert(0, REMASTER)
 from build import build  # noqa: E402
-from nes import BUTTON_A, Nes  # noqa: E402
+from nes import BUTTON_A, BUTTON_B, Nes  # noqa: E402
 import verify_player as V  # noqa: E402
 from lab import BUTTON, RESET  # noqa: E402
 
@@ -49,6 +49,8 @@ class NesLab:
 
     def __init__(self, rom: str):
         self.nes = Nes(rom)
+        self.nes.run(5)
+        self.nes.run(2, {BUTTON_B})   # past the story (any button; B is no 2600 control)
         self.nes.run(5)
 
     def run(self, frames: int = 1, held: Iterable[int] = ()) -> None:

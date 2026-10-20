@@ -24,7 +24,10 @@ REMASTER = os.path.join(os.path.dirname(ROOT), "haunted-house")
 sys.path.insert(0, REMASTER)
 import looks  # noqa: E402
 from game import rom as R  # noqa: E402
+from game import guide  # noqa: E402
+from looks.nes import look as NL  # noqa: E402
 from shared import hud  # noqa: E402
+import screens  # noqa: E402
 from shared import palettes as PAL  # noqa: E402
 
 OUTPUT = os.path.join(ROOT, "build", "art")
@@ -51,7 +54,8 @@ SPRITE_PAIRS = 128         # tile pairs in the sprites' 4K
 # Each kind of thing and its pictures (the remaster's cast names; frames after the colon). A kind shares
 # three colours. Right-facing pictures the cast doesn't draw are the left ones mirrored, by the code.
 CAST_KINDS = {
-    "eyes": ["eyes_centre", "eyes_left", "eyes_right", "eyes_up", "eyes_down", "eyes_blink"],
+    "eyes": ["eyes_centre", "eyes_left", "eyes_right", "eyes_up", "eyes_down", "eyes_blink",
+             "patch/16x8", "patch/18x12"],   # black: the lit window's room behind the eyes; the window, dark
     "light": ["hood", "match_hand_right:0", "match_hand_right:1"],
     "key": ["key"],
     "scepter": ["scepter"],
@@ -65,6 +69,8 @@ CAST_KINDS = {
                    for frame in (0, 1)],
     "tarantula4": [f"tarantula4_{facing}:{frame}" for facing in ("down", "left", "right", "up")
                    for frame in (0, 1)],
+    "moon": ["world/title_moon@2"],        # the title's moon (the world's picture, at twice size)...
+    "sun": ["sunrise/title_moon@2"],       # ...and warmed, the ending's rising sun
 }
 
 
@@ -231,11 +237,33 @@ def light_table() -> list[int]:
     return levels
 
 
+SUN_TINT = np.array([1.25, 0.95, 0.45])   # the remaster's warming of the moon into the sun
+
+
 def cast_picture(look: "looks.FloorLook", entry: str) -> np.ndarray:
-    """A cast picture (RGBA) through the NES look's colours: "name" or "name:frame"."""
-    name, _, frame = entry.partition(":")
+    """A picture (RGBA) through the NES look's colours: a cast picture, "name" or "name:frame"; a world
+    picture "world/name@scale", or warmed into the sun "sunrise/name@scale"; or a black "patch/WxH"."""
+    kind, _, rest = entry.rpartition("/")
+    if kind == "patch":
+        width, height = (int(number) for number in rest.split("x"))
+        patch = np.zeros((height, width, 4), np.uint8)
+        patch[..., 3] = 255
+        return patch
+    if kind in ("world", "sunrise"):
+        name, _, scale = rest.partition("@")
+        picture = look.pack.world.must(name)[0].copy()
+        if kind == "sunrise":
+            shade = picture[..., :3].astype(float).mean(axis=2, keepdims=True) / 255
+            picture[..., :3] = np.clip(shade * 255 * SUN_TINT, 0, 255).astype(np.uint8)
+        size = int(scale or 1)
+        return look.adapt(picture).repeat(size, axis=0).repeat(size, axis=1)
+    name, _, frame = rest.partition(":")
     frames = look.pack.cast.must(name)
     return look.adapt(frames[int(frame) if frame else 0])
+
+
+def picture_label(entry: str) -> str:
+    return "".join(letter if letter.isalnum() else "_" for letter in entry)
 
 
 def sprite_indices(picture: np.ndarray, codes: list[int]) -> Indices:
@@ -250,6 +278,7 @@ def sprite_indices(picture: np.ndarray, codes: list[int]) -> Indices:
 KIND_COLOURS_CHOSEN = {       # kinds whose three colours are chosen, where the automatic choice lost too much
     "bat": [BLACK, 0x14, 0x2A],          # purple, with its green eyes
     "light": [0x07, 0x27, 0x37],         # the hood's brown, the flame's orange, the hand
+    "sun": [0x28, 0x38, 0x30],           # pale yellows: a rising sun, brighter than the orange sky
 }
 
 
@@ -319,7 +348,7 @@ def sprite_include(look: "looks.FloorLook", tiles: SpriteTiles) -> list[str]:
         colour_lines += byte_lines(codes)
         for entry, picture in zip(entries, pictures):
             pieces = sprite_pieces(sprite_indices(picture, codes), tiles)
-            label = entry.replace(":", "_")
+            label = picture_label(entry)
             lines.append(f"picture_{label}:   ; {picture.shape[1]} x {picture.shape[0]}")
             lines += byte_lines([picture.shape[1], picture.shape[0], len(pieces)])
             lines += byte_lines([value for piece in pieces for value in piece], 16)
@@ -379,6 +408,79 @@ def byte_lines(data: list[int], per_line: int = 30) -> list[str]:
             for start in range(0, len(data), per_line)]
 
 
+SCREEN_SETS_FROM = 5       # the title's tile set, then the ending's, after the floors' four and the sprites'
+
+
+def screen_sets(look: "looks.FloorLook") -> tuple[bytes, list[str]]:
+    """The title's and the ending's tile sets, and their nametables, attributes and colours."""
+    mansion = look.adapt(look.pack.world.must("title_mansion")[0])
+    mansion_colours = screens.mansion_palettes(mansion)
+    title = screens.Screen()
+    title.place_mansion(mansion, mansion_colours)
+    title.place_stars(NL.STARS)
+    title.grey_rows(0, 1)                  # the hints
+    title.grey_rows(6, 13)                 # the game's rules, or the matches used
+    ending = screens.Screen()
+    ending.place_mansion(mansion, mansion_colours)
+    ending.place_dawn()
+    chr_data = b""
+    lines = ["; Made by tools/make_art.py: the full screens. Never commit this file."]
+    for name, screen, backing, colours in (("title", title, False, [screens.TITLE_WORDS, screens.TITLE_GREY]),
+                                           ("ending", ending, True, [screens.ENDING_WORDS, screens.DAWN])):
+        tiles, names = screens.word_tiles(FONT_ORDER, backing, tile_bytes)
+        distinct: dict[bytes, int] = {}
+        for number, data in enumerate(tiles):
+            distinct.setdefault(data, number)
+        extra: list[bytes] = []
+        table = screen.tiles(len(tiles), distinct, extra, tile_bytes)
+        if len(tiles) + len(extra) > TILES_PER_SET:
+            raise ValueError(f"the {name} screen needs {len(tiles) + len(extra)} tiles")
+        chr_data += b"".join(tiles + extra).ljust(SET_BYTES, b"\0")
+        lines += [f"{name}_nametable:   ; {len(tiles) + len(extra)} tiles"] + byte_lines(table, 32)
+        lines += [f"{name}_attributes:"] + byte_lines(screen.attributes())
+        words, grey_or_dawn = colours
+        backdrop = screens.TITLE_SKY if name == "title" else screens.ENDING_BACKDROP
+        palette = [backdrop, *words, backdrop, *mansion_colours[0], backdrop, *mansion_colours[1],
+                   backdrop, *grey_or_dawn]
+        lines += [f"{name}_colours:"] + byte_lines(palette)
+    lines += names + [f"TITLE_FLASH = ${screens.TITLE_FLASH:02X}"]
+    return chr_data, lines + text_lines()
+
+
+def text(line: str) -> str:
+    """A line as the assembler writes it: the font's tiles (font.inc's character map), $FF at the end."""
+    return f'.byte "{line}", $FF' if line else ".byte $FF"
+
+
+KEYS_TO_BUTTONS = [("SPACE", "A")]   # the help's keyboard words, as the NES's controller says them
+
+
+def on_the_controller(line: str) -> str:
+    for key, button in KEYS_TO_BUTTONS:
+        line = line.replace(key, button)
+    return line
+
+
+def text_lines() -> list[str]:
+    """The words the screens show, from the remaster's game/guide.py: the story, the help (each line's
+    first byte: 1 a heading, 0 not), each game's rules (an empty line ends a game's), the verdicts by
+    matches used."""
+    lines = ["story_lines:"] + [f"    {text(line)}" for line in guide.STORY] + ["    .byte $FE"]
+    lines += ["help_lines:"]
+    for line, kind in guide.HOW_TO_PLAY:
+        lines.append(f"    .byte {1 if kind == 'title' else 0}")
+        lines.append(f"    {text(on_the_controller(line))}")
+    lines += ["    .byte $FE", "game_rules:   ; where each game's rules start"]
+    lines += ["    .word " + ", ".join(f"game{game}_rules" for game in range(1, 10))]
+    for game in range(1, 10):
+        lines += [f"game{game}_rules:"] + [f"    {text(rule)}" for rule in guide.game_rules(game)]
+        lines += ["    .byte $FE"]
+    lines += ["verdicts:   ; the most matches for each line ($FF: any), then the line"]
+    for most, line in guide.VERDICTS:
+        lines += [f"    .byte {most if most is not None else 255}", f"    {text(line)}"]
+    return lines
+
+
 def main() -> None:
     look = looks.make("nes", R.load())
     font, status_names = status_tiles(look)
@@ -395,6 +497,8 @@ def main() -> None:
     sprites = SpriteTiles()
     sprite_lines = sprite_include(look, sprites)
     chr_data += b"".join(sprites.pairs).ljust(SET_BYTES, b"\0")
+    screen_chr, screen_lines = screen_sets(look)
+    chr_data += screen_chr
     names = look.pack.info.get("floors", [f"FLOOR {number + 1}" for number in range(FLOORS)])
     for floor, name in enumerate(names):
         lines += [f'floor{floor + 1}_name: .byte "{name.upper()}", $FF']   # (0 is a space)
@@ -407,6 +511,8 @@ def main() -> None:
         include.write("\n".join(lines) + "\n")
     with open(os.path.join(OUTPUT, "font.inc"), "w") as include:
         include.write(font_map())
+    with open(os.path.join(OUTPUT, "screens.inc"), "w") as include:
+        include.write("\n".join(screen_lines) + "\n")
     with open(os.path.join(OUTPUT, "sprites.inc"), "w") as include:
         include.write("\n".join(sprite_lines) + "\n")
     print(f"{len(sprites.pairs)} sprite tile pairs of {SPRITE_PAIRS}")

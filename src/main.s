@@ -6,7 +6,7 @@
 
 .segment "HEADER"
     .byte "NES", $1A      ; iNES
-    .byte 2               ; 32K of program
+    .byte 4               ; 64K of program
     .byte 4               ; 32K of tiles
     .byte $41, 0          ; mapper 4 (MMC3)
     .res 8, 0
@@ -20,6 +20,7 @@ APU_FRAME   = $4017
 
 ; the controller's bits once the D-pad has been shifted out of pad
 PAD_A      = $08
+PAD_B      = $04
 PAD_SELECT = $02
 PAD_START  = $01
 DIRECTIONS = 4
@@ -63,6 +64,7 @@ main_loop:
     sta spare + 1
     sta frame_started
     jsr read_controller
+    jsr screen_buttons
     inc busy
 .ifdef PROFILE
     lda #(RENDER_ON | $E0) ; a debug build tints the screen while the game works (all emphasis bits)
@@ -95,11 +97,16 @@ wait_for_vblank:
     rts
 
 clear_ram:
+    lda #$FF              ; the sprites' table: every sprite below the screen
+    ldx #0
+@sprites:
+    sta $0200, x
+    inx
+    bne @sprites
+    stx oam_used          ; (0: hide_the_rest has nothing more to hide)
     lda #0
-    tax
 @next:
     sta $0000, x
-    sta $0200, x          ; (page 1 is the stack, in use)
     sta $0300, x
     sta $0400, x
     sta $0500, x
@@ -164,6 +171,7 @@ read_controller:
 .include "view.s"
 .include "sprites.s"
 .include "audio.s"
+.include "screens.s"
 .include "ppu.s"
 
 .segment "RODATA"
@@ -180,7 +188,10 @@ first_cell_low:     .byte $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00,
 
 .segment "MAPS"
 .include "art.inc"
+.segment "MUSIC"
 .include "sound.inc"
+.segment "EXTRAS"
+.include "screens.inc"
 .segment "RODATA"
 .include "sprites.inc"
 

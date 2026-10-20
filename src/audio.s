@@ -480,6 +480,17 @@ write_voice:
 ; The moment's song (the remaster's music.player.moment): the win, the title or game over, dying, danger
 ; (on for a while after the last monster leaves), or the floor's own.
 choose_song:
+    lda screen_wanted
+    cmp #SCREEN_STORY
+    bne @not_story
+    lda #SONG_STORY
+    jmp start_song
+@not_story:
+    cmp #SCREEN_ENDING
+    bne @not_ending
+    lda #SONG_WIN
+    jmp start_song
+@not_ending:
     lda monsters_here
     beq @calm
     lda #CALM_FRAMES

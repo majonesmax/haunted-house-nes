@@ -158,6 +158,45 @@ was_monsters_here: .res 1
 was_lightning:  .res 1
 was_sound:      .res 1
 
+; screens.s
+.segment "ZEROPAGE"
+text_pointer:   .res 2    ; a string being put on a word row
+.segment "BSS"
+screen_wanted:  .res 1    ; the screen this moment wants...
+screen_shown:   .res 1    ; ...and the one in the first nametable
+story_done:     .res 1    ; not 0 once a button has ended the story
+help_open:      .res 1
+pad_before:     .res 1    ; the buttons last frame, and those pressed since
+pad_pressed:    .res 1
+screen_frames:  .res 2    ; frames since the screen was drawn
+full_row:       .res 1    ; drawing a full screen: the next row
+slots_dirty:    .res 2    ; a bit per word row to send again
+slot:           .res 1
+shown_game:     .res 1    ; the game number the title shows
+background_bank: .res 1   ; the background's tile set (1K bank number)
+bank_select:    .res 1    ; the MMC3's bank register as the main loop last set it
+screen_colours: .res 16   ; the screen's background colours
+screen_attributes: .res 64
+word_row:       .res 1    ; a word row: where, and its 32 tiles
+word_tiles:     .res 32
+queue_count:    .res 1    ; word rows for the NMI to send: up to 2
+queue_rows:     .res 2
+queue_tiles:    .res 64
+text_column:    .res 1
+big_half:       .res 1
+story_lines_sent: .res 1
+help_row:       .res 1
+help_pointer:   .res 2    ; drawing the help: the next line
+words_written:  .res 1    ; drawing a full screen: word rows written so far
+walk_x:         .res 2    ; the ending: the eyes' x (8.8)...
+walk_pause:     .res 1    ; ...how long they've looked back...
+walk_looking_back: .res 1
+walk_bob:       .res 1
+won_frames:     .res 1    ; the win at the door: frames so far
+draw_priority:  .res 1    ; $20: a sprite behind the background
+sprites_from:   .res 1    ; the lines sprites may be drawn on
+sprites_to:     .res 1
+
 ; moved out of the zero page, which is full (the game's state takes its top half)
 .segment "BSS"
 last_spare:     .res 2    ; ...and last frame's count (x 13 cycles: its spare time)

@@ -24,6 +24,10 @@ VIEW_TOP_LINE = 40
 VIEW_HEIGHT  = 160
 BELOW_TOP_LINE = 200
 SPRITE_TILES_BANK = 16    ; the sprites' 4K: 1K banks 16-19
+MAPS_BANK = 0             ; program banks (src/mmc3.cfg)
+MUSIC_BANK = 1
+EXTRAS_BANK = 2
+PROGRAM_BANK_8000 = 6     ; the MMC3's register for the bank at $8000
 OAM          = $0200
 
 .segment "CODE"
@@ -45,12 +49,10 @@ set_up_board:
     sta shown_floor
     rts
 
-; The floor's tile set for the background (2K + 2K at $0000).
+; The screen's tile set for the background (2K + 2K at $0000): a floor's, the title's or the ending's.
+; Then the bank register back as the main loop left it (screens.s, use_extras).
 set_floor_tiles:
-    lda shown_floor
-    and #3
-    asl
-    asl                   ; the floor's 4K: 1K banks floor * 4 to floor * 4 + 3
+    lda background_bank
     ldx #0
     stx BANK_SELECT
     sta BANK_DATA
@@ -59,6 +61,8 @@ set_floor_tiles:
     ldx #1
     stx BANK_SELECT
     sta BANK_DATA
+    lda bank_select
+    sta BANK_SELECT
     rts
 
 nmi:
@@ -90,9 +94,15 @@ nmi:
     lda #>OAM
     sta OAM_DMA
     jsr send_palettes
+    lda screen_shown
+    bne @full_screen_sends
     jsr send_row
     jsr send_attributes
     jsr send_status
+    jmp @sent
+@full_screen_sends:
+    jsr send_word_rows
+@sent:
     lda #0
     sta render_ready
 @scroll:
@@ -100,6 +110,16 @@ nmi:
     lda #RENDER_ON
     sta PPU_MASK
     bit PPU_STATUS
+    lda screen_shown
+    beq @split
+    lda #CONTROL_VIEW     ; a full screen: the first nametable, no splits
+    sta PPU_CONTROL
+    lda #0
+    sta PPU_SCROLL
+    sta PPU_SCROLL
+    sta IRQ_OFF
+    jmp @done
+@split:
     lda #CONTROL_STATUS   ; the status band: the second nametable, from its top
     sta PPU_CONTROL
     lda #0
@@ -218,6 +238,41 @@ send_attributes:
 @done:
     rts
 
+; A full screen's word rows (screens.s): each row's 32 tiles.
+send_word_rows:
+    ldx #0
+    ldy #0
+@row:
+    cpx queue_count
+    beq @done
+    lda queue_rows, x     ; $2000 + row * 32
+    lsr
+    lsr
+    lsr
+    ora #$20
+    sta PPU_ADDRESS
+    lda queue_rows, x
+    asl
+    asl
+    asl
+    asl
+    asl
+    sta PPU_ADDRESS
+    lda #32
+    sta work_11
+@tile:
+    lda queue_tiles, y
+    sta PPU_DATA
+    iny
+    dec work_11
+    bne @tile
+    inx
+    jmp @row
+@done:
+    lda #0
+    sta queue_count
+    rts
+
 send_status:
     ldx #0
 @next:
@@ -235,7 +290,7 @@ send_status:
     rts
 
 .segment "RODATA"
-power_on_banks:           ; R0-R7: background 2K + 2K, sprites 1K x 4, program 8K x 2
+power_on_banks:           ; R0-R7: background 2K + 2K, sprites 1K x 4, program 8K x 2 (the maps, the music)
     .byte 0, 2, SPRITE_TILES_BANK, SPRITE_TILES_BANK + 1, SPRITE_TILES_BANK + 2, SPRITE_TILES_BANK + 3
-    .byte 0, 1
+    .byte MAPS_BANK, MUSIC_BANK
 .segment "CODE"

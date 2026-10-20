@@ -32,6 +32,10 @@ MIRRORED = $40
 URN_FIRST_SHAPE = 2
 
 build_sprites:
+    lda #VIEW_FIRST_LINE  ; sprites only in the view
+    sta sprites_from
+    lda #VIEW_LAST_LINE
+    sta sprites_to
     lda #0
     sta oam_next
     sta oam_full
@@ -101,7 +105,7 @@ compose_sprite_palettes:
     asl
     asl
     tay                   ; the slot's place in the sprites' palettes
-    lda #BLACK_COLOUR
+    lda palette_buffer    ; (its first colour is the backdrop's own, mirrored: $3F10 is $3F00)
     sta palette_buffer + SPRITE_PALETTES, y
     lda slot_kind, x
     cmp #NO_KIND
@@ -289,10 +293,12 @@ draw_picture:
     adc #0
     bne @skip             ; above or below the screen
     lda work_1
-    cmp #VIEW_FIRST_LINE
+    cmp sprites_from
     bcc @skip
-    cmp #(VIEW_LAST_LINE + 1)
+    cmp sprites_to
+    beq @in
     bcs @skip
+@in:
     iny
     lda (draw_pointer), y ; its left within the picture
     ldx draw_mirror
@@ -313,6 +319,7 @@ draw_picture:
     lda (draw_pointer), y ; the attributes: mirrored, and the palette
     eor draw_mirror
     ora draw_palette
+    ora draw_priority
     iny
     ldx oam_next
     sta OAM + 2, x
