@@ -14,6 +14,7 @@ from it is in this repository).
 ```sh
 brew install cc65                       # or https://cc65.github.io
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python tools/build.py         # build/haunted_house.nes
+.venv/bin/python tools/build.py         # build/haunted_house_faithful.nes, from your own 2600 ROM
 .venv/bin/python tests/test_boot.py     # it boots (needs the FCEUmm libretro core in cores/)
+.venv/bin/python tests/verify_engine.py # it plays exactly like the original (needs ../haunted-house)
 ```

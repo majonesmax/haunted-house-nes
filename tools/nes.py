@@ -81,6 +81,20 @@ class Nes:
         address = self.lib.retro_get_memory_data(MEMORY_SYSTEM_RAM)
         return np.ctypeslib.as_array(C.cast(address, C.POINTER(C.c_uint8)), shape=(NES_RAM,))
 
+    def save(self) -> bytes:
+        """The whole console's state, to come back to with load()."""
+        self.lib.retro_serialize_size.restype = C.c_size_t
+        size = self.lib.retro_serialize_size()
+        buffer = C.create_string_buffer(size)
+        if not self.lib.retro_serialize(buffer, size):
+            raise RuntimeError("the core would not save its state")
+        return buffer.raw
+
+    def load(self, state: bytes) -> None:
+        buffer = C.create_string_buffer(state, len(state))
+        if not self.lib.retro_unserialize(buffer, len(state)):
+            raise RuntimeError("the core would not load the state")
+
     def run(self, frames: int = 1, held: set[int] | None = None) -> None:
         self.held = held or set()
         for _ in range(frames):

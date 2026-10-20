@@ -10,8 +10,11 @@ predict the original game exactly. Python here is for tools and checks only.
 ## Commands
 
 ```sh
-.venv/bin/python tools/build.py          # build/haunted_house.nes (ca65 + ld65, src/nrom.cfg)
+.venv/bin/python tools/extract.py        # the original mansion from your 2600 ROM -> build/faithful/ (never commit)
+.venv/bin/python tools/build.py          # build/haunted_house_faithful.nes (ca65 + ld65, src/nrom.cfg)
 .venv/bin/python tests/test_boot.py      # it boots in the emulator (tools/nes.py, FCEUmm in cores/)
+.venv/bin/python tests/verify_engine.py  # the engine against the remaster's model, frame by frame (run it after
+                                         # any change to src/; it also fails if a frame runs late)
 .venv/bin/python tools/readability.py    # the Python readability rules (a hook runs it after each edit)
 ```
 

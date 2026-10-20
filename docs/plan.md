@@ -48,11 +48,14 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
 
 1. **The tools** - done: cc65 builds the ROM, `tools/nes.py` runs it in FCEUmm (libretro) with no window, and
    `tests/test_boot.py` checks it boots.
-2. **The mansion as data**: `tools/extract.py` reads the original's tables from your ROM into
-   `build/faithful/` (never committed); the same format for the new mansion, from a file of our own.
-3. **The engine**, a routine at a time, each checked against the model before the next: the random numbers,
-   a new game, moving, doors and stairs, the match and the button, the monsters, items and the urn, dropping,
-   touching, dying and winning, the switches. The check grows with it until it compares the whole state.
+2. **The mansion as data** - done: `tools/extract.py` reads the original's tables from your ROM into
+   `build/faithful/mansion.inc` (never committed): the walls, doors, stairs and waypoints, the rules'
+   numbers, and the shapes touching is worked out from. The new mansion will come in the same form, from a
+   file of our own.
+3. **The engine** - done: the whole game in 6502 (`src/`), written from the models. `tests/verify_engine.py`
+   is the remaster's own check with the NES in place of the 2600: over three runs of 90,000 frames the
+   NES's state matches the model on every frame it compares, and the NES never takes longer than a frame.
+   Nothing is drawn yet; the game runs without a picture or sound.
 4. **The picture**: the floor as background tiles that scroll, the eyes, items and monsters as sprites (all of
    them every frame - no flicker), the status line, the dark and the match's light, lightning. The art comes
    from the remaster's NES look, redrawn as 8×8 tiles in four colours.
