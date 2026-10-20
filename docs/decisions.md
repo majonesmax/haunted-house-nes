@@ -68,6 +68,20 @@ remaster's model of the original - every byte, every frame - so the rules are pr
 the screen or listens to the sound. The flashing, the ending's first frame in the wrong colours, and every
 game being the same game (the random numbers' seed) were all found by playing it.
 
+## 2026-10-20: The browser page keeps EmulatorJS's 64 ms sound buffer
+
+**Chose:** leave EmulatorJS's audio buffer at its 64 ms, so the sound stays a little late. The page's patch that
+shortened it to 32 ms is gone.
+
+**Why:** the emulator paces the game on that buffer, so it must be longer than the sound device's own delay.
+On a MacBook Air (speakers: 40 ms) the 32 ms buffer ran the game at 49 frames a second instead of 60, in Chrome
+and Safari alike, and 16 ms ran it at 25; 64 ms and 128 ms ran it at 60. On a MacBook Pro the 32 ms had
+seemed fine. Measured by counting the frames the core uploads to the screen each second, with Chrome driven
+over its debugging protocol.
+
+**What else:** read the device's output latency after the start click and size the buffer to it. It's a
+second reach into EmulatorJS's internals for a delay most people won't notice; not worth it.
+
 ## 2026-10-20: A cellar and four floors, not six
 
 **Chose:** the Cellar, the Foyer (with the front door), the Gallery, the Bedrooms and the Attic. The

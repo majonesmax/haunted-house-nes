@@ -111,21 +111,10 @@
       1: {}, 2: {}, 3: {},
     };
 
-    // The sound's delay. EmulatorJS 4.2.3 always gives RetroArch audio_latency = 64 (ms), and the browser adds
-    // its own on top: the sound came noticeably late. There's no option for it, so this wraps EmulatorJS's own
-    // settings writer (EJS_GameManager, made once the core has downloaded) to ask for 32 ms instead. It
-    // reaches into EmulatorJS's internals: if the version above changes, check this still applies.
-    const AUDIO_LATENCY_MS = 32;
-    const lowerLatency = setInterval(() => {
-      const manager = window.EJS_GameManager;
-      if (!manager || manager.prototype.latencyLowered) return;
-      const writeSettings = manager.prototype.getRetroArchCfg;
-      manager.prototype.getRetroArchCfg = function () {
-        return writeSettings.call(this).replace(/audio_latency = \d+/, `audio_latency = ${AUDIO_LATENCY_MS}`);
-      };
-      manager.prototype.latencyLowered = true;
-      clearInterval(lowerLatency);
-    }, 5);
+    // The sound's delay: EmulatorJS gives RetroArch a 64 ms audio buffer, and the browser adds its own on top,
+    // so the sound comes a little late. Leave it. The emulator paces itself on that buffer: with it at 32 ms, a
+    // MacBook Air whose speakers answer in 40 ms ran the game at 49 frames a second instead of 60, and at
+    // 16 ms, 25. A smaller buffer than the sound device's own delay slows the whole game down.
   </script>
   <script src="https://cdn.emulatorjs.org/4.2.3/data/loader.js"></script>
 </body>
