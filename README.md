@@ -4,6 +4,22 @@ A native NES game of the Atari 2600 *Haunted House* (1982): the same game, rule 
 mansion - a cellar and four floors - drawn the way the [Haunted House remaster](https://github.com/majonesmax/haunted-house-remastered)'s
 NES look draws it. It runs on any NES emulator, or a real NES with an MMC3 cartridge.
 
+<p>
+  <img src="docs/media/title.png" width="49%" alt="The title: the mansion at night, the eyes in the tower window">
+  <img src="docs/media/ending.png" width="49%" alt="The ending: out of the mansion at dawn, with the urn">
+</p>
+<p>
+  <img src="docs/media/foyer_by_matchlight.png" width="49%" alt="The Foyer in the dark, by the light of a match">
+  <img src="docs/media/gallery.png" width="49%" alt="The Gallery, its portraits on the walls">
+</p>
+<p>
+  <img src="docs/media/bedrooms.png" width="49%" alt="The Bedrooms: a patterned carpet, mirrors and candles">
+  <img src="docs/media/cellar.png" width="49%" alt="The Cellar: stone walls, flagstones, wine racks and barrels">
+</p>
+
+The title; the ending, out at dawn; the Foyer as you play it, by matchlight; and three floors with the
+lights-on cheat on, so the whole floor shows - the Gallery, the Bedrooms and the Cellar.
+
 **Download** the ROM from the [releases](../../releases): `haunted_house.nes`.
 
 Find the three pieces of the urn and carry the whole urn out of the front door, in the dark, with only

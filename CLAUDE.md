@@ -19,6 +19,7 @@ predict the original game exactly. Python here is for tools and checks only.
 .venv/bin/python tools/get_core.py       # the FCEUmm core into cores/ (libretro's nightly)
 .venv/bin/python tools/check_mansion.py  # mansion/floors.txt plays as the original does (after any change to it)
 .venv/bin/python tools/draw_mansion.py   # its plans as a picture: shots/mansion.png
+.venv/bin/python tools/readme_media.py   # the README's pictures, in docs/media/ (after a change to the look)
 .venv/bin/python tests/test_mansion.py   # the text format gets the original's tables back exactly
 .venv/bin/python tests/test_check_mansion.py  # the checker catches broken mansions
 .venv/bin/python tools/record_sound.py NAME 30 6:start 600   # play some frames, save shots/sound/NAME.wav
