@@ -3,6 +3,71 @@
 The choices made along the way, what else was possible, and what each one cost. Newest first. When a
 choice is changed, the old entry stays and says what replaced it.
 
+First, the hard parts: what the NES makes difficult for this game in particular. Most of the choices below
+are a way through one of them.
+
+## The hard parts
+
+**The light, and colour on a grid of 16 x 16 blocks.** *Haunted House* is a game about darkness: a small
+glow round the eyes, the rest unseen. The 2600 draws that glow as a shape around the eyes; the remaster
+paints it pixel by pixel with a soft edge. The NES can't change pixels one by one like that: its background
+is tiles, and colour comes from four palettes of three colours (plus one black shared by all), chosen per 16
+x 16 block. So the light can only switch whole blocks between palettes, and every palette spent on light is
+one fewer for the art. That's the trade at the heart of the colour choices: soft light (lit, dim, unlit -
+three palettes on light) left three colours for each floor; richer art (a palette for walls, one for floors)
+leaves the light hard-edged. The fourth palette always goes to the status band at the top.
+
+**The walls don't line up with the blocks.** The floor's walls come in cells of 24 x 32 pixels (the
+original's 16 x 16 units, drawn 1.5 wide and 2 tall), and the colour blocks are 16 x 16. Many blocks are
+part wall, part floor, and take one palette for both. That's why the two palettes share the floor's and the
+walls' main colours: without that, blocks along a wall's edge drew a slice of wall in the floor's colours.
+It's also why the light's edge is blocky, and why "the light doesn't reach past the room's limits" is
+judged a block row at a time.
+
+**What's seen depends on the game, and on the moment.** The rules for what may be seen are the original's:
+the walls always in game 1 and only in lightning in games 2-9; items only near a lit match; monsters only in
+your room. A palette has to serve all of those at once: in game 1's dark the walls must show while the
+floor stays black, so the dark palette keeps only the colour slot the walls use. A lightning flash
+brightens the dark palette for a few frames. The lights-on cheat breaks the light's rules entirely, so it
+can't go through the light at all: it draws each block's palette from the floor's map of blocks.
+
+**Too few tiles for rich art.** A set of tiles holds 256, and the font and the status band need 160 of
+them, leaving 96 for a whole floor. Every distinct 8 x 8 piece of art is a tile, so texture must repeat: the
+art is built from small motifs (brick, boards, damask) that tile cleanly, and decorations are few. Richer
+art means more distinct tiles; the busiest floor now uses 84.
+
+**The floor is taller than the screen's memory.** A floor's picture is 512 pixels tall; the NES holds 240
+(30 rows of tiles). So the view keeps 30 rows loaded and streams one new row in a frame as it scrolls -
+and the light, the cheat's colours and the redraws all have to agree with which floor rows are where. The
+one bug of that kind so far: at a floor's bottom the view needs 20 rows, not the usual 21, and the test for
+"the view has run past what's loaded" didn't know, so it redrew the floor over and over (the flashing).
+
+**Only so much can be sent to the screen each frame.** The PPU can only be written in the vertical blank,
+about 2,270 CPU cycles a frame. Into that go the sprites (513 cycles on their own), the colours, a streamed
+row of the floor, the light's changed blocks, the status band's changed tiles, and a row of a hint or a full
+screen's words. Sending too much runs past the blank and the picture jumps: the ending's words did that,
+until they were sent a row a frame. A hint's row waits for a frame with nothing else much to send.
+
+**And only so much work in a frame.** A frame is 29,780 cycles, and the game must finish in one or the NES
+falls behind the original. The 2600 found touching (who touches what) in hardware; here it's worked out in
+software, scanline by scanline, and it's the biggest single cost. The busiest moment - dying with a match
+lit and all five monsters on the floor - came within a few hundred cycles of the limit, which is how two
+slow paths were found: a light cache that never worked, and a redraw that did too much in its last frame.
+
+**Sprites: eight to a line.** Everything that moves is a sprite: 64 at most, eight on a line, four palettes
+of three colours. The kinds of thing on screen share those four palettes, handed out each frame; the
+urn's shimmer is a palette cycling. More than eight on one line would flicker, which the house's sizes
+mostly avoid.
+
+**Splitting the screen.** The status band, the scrolling view and the band below are three regions of one
+picture, split by the MMC3 cartridge's scanline counter. The scroll has to be changed partway down the
+screen, inside a horizontal blank of a few dozen cycles, or a line tears.
+
+**The checks can't see the picture.** The frame-by-frame check compares the game's state with the
+remaster's model of the original - every byte, every frame - so the rules are proved. But it never looks at
+the screen or listens to the sound. The flashing, the ending's first frame in the wrong colours, and every
+game being the same game (the random numbers' seed) were all found by playing it.
+
 ## 2026-10-20: The floors' colours: a palette for walls and one for floors (option 2)
 
 **Chose:** each floor gets two lit palettes - one for walls, one for floors - and each 16 x 16 block of the
