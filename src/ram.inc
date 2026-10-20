@@ -109,6 +109,55 @@ monster_last_y: .res 5
 monster_facing: .res 5
 monster_still:  .res 5    ; frames since it last moved
 
+; audio.s
+.segment "BSS"
+song_playing:   .res 1
+song_paused:    .res 1    ; a floor's song interrupted, to carry on later
+voice_playing:  .res 4    ; per voice: its stream not ended...
+voice_pointer_low: .res 4 ; ...where it's got to...
+voice_pointer_high: .res 4
+voice_start_low: .res 4   ; ...where it starts (to loop)...
+voice_start_high: .res 4
+voice_wait:     .res 4    ; ...frames left of its note...
+voice_note:     .res 4
+voice_instrument: .res 4
+voice_envelope: .res 4    ; ...the note's place in its instrument's volumes...
+voice_arpeggio_1: .res 4  ; ...its chord, if any...
+voice_arpeggio_2: .res 4
+voice_arpeggio_step: .res 4
+voice_volume:   .res 4    ; ...and this frame's sound
+voice_duty:     .res 4
+voice_period_low: .res 4
+voice_period_high: .res 4
+last_high:      .res 4    ; the period's high byte last written
+kept_pointer_low: .res 4  ; a floor song's places, kept
+kept_pointer_high: .res 4
+kept_start_low: .res 4
+kept_start_high: .res 4
+kept_wait:      .res 4
+kept_instrument: .res 4
+effect_playing: .res 1
+effect_left:    .res 4    ; per voice: frames left of the effect on it...
+effect_pointer_low: .res 4  ; ...and where
+effect_pointer_high: .res 4
+calm_left:      .res 1
+walking:        .res 1
+since_thunder:  .res 1
+lightning_flash: .res 1
+was_matches:    .res 1    ; last frame's state, to hear what changed
+was_flags:      .res 1
+was_floor:      .res 1
+was_room:       .res 1
+was_room_beyond: .res 1
+was_x:          .res 1
+was_y:          .res 1
+was_state:      .res 1
+was_carried:    .res 1
+was_group:      .res 1
+was_monsters_here: .res 1
+was_lightning:  .res 1
+was_sound:      .res 1
+
 ; moved out of the zero page, which is full (the game's state takes its top half)
 .segment "BSS"
 last_spare:     .res 2    ; ...and last frame's count (x 13 cycles: its spare time)

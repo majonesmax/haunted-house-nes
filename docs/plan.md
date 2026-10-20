@@ -63,7 +63,12 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    shimmering by palette; the status band as the remaster's - the burning match, the held item, the urn so
    far, lives - sending only what changed. The busiest frame (dropping by a wall with a match lit) keeps
    about 5,800 of its 29,780 cycles spare (`tools/profile.py`). Possible later: a rounder light.
-5. **The sound**: the NES's sound chip playing the remaster's NES-look effects and music.
+5. **The sound** - done: `tools/make_music.py` arranges the remaster's classic soundtrack by its own synth's
+   rules as note streams for the NES's four voices (a chord on one voice played as a fast arpeggio, the
+   NES way), and its 20 remastered effects as frame-by-frame lists; `src/audio.s` plays them - the song
+   follows the moment (a floor's tune carrying on after a monster's visit), the effects follow what just
+   happened (the remaster's events). `tools/record_sound.py` saves what's heard as a WAV. Possible later:
+   the 2600's own sound as a choice, and the house's ambience (rain, the attic's quiet).
 6. **The remaster's extras**: the title screen and story, G's hints, the lights-on cheat, the storm, the
    ending.
 7. **The new mansion**: designed for the NES, bigger than the original, with a check that its waypoints keep

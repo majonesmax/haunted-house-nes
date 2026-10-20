@@ -17,6 +17,7 @@ ROM = os.path.join(BUILD, "haunted_house_faithful.nes")
 MANSION = os.path.join(BUILD, "faithful")   # tools/extract.py makes it from your 2600 ROM
 LINK_CONFIG = os.path.join(SOURCE, "mmc3.cfg")
 ART = os.path.join(BUILD, "art")             # tools/make_art.py makes it from the remaster's NES look
+SOUND = os.path.join(BUILD, "sound")         # tools/make_music.py makes it from the remaster's soundtrack
 
 
 def build(profile: bool = False) -> str:
@@ -27,13 +28,17 @@ the screen while the game works, so a screenshot shows how long each part takes.
         subprocess.run([sys.executable, os.path.join(ROOT, "tools", "extract.py")], check=True)
     if not os.path.exists(os.path.join(ART, "art.inc")):
         subprocess.run([sys.executable, os.path.join(ROOT, "tools", "make_art.py")], check=True)
+    if not os.path.exists(os.path.join(SOUND, "sound.inc")):
+        subprocess.run([sys.executable, os.path.join(ROOT, "tools", "make_music.py")], check=True)
     program = os.path.join(BUILD, "main.o")
-    includes = ["-I", SOURCE, "-I", MANSION, "-I", ART, "--bin-include-dir", ART]
+    includes = ["-I", SOURCE, "-I", MANSION, "-I", ART, "-I", SOUND, "--bin-include-dir", ART]
     defines = ["-D", "PROFILE"] if profile else []
     subprocess.run(["ca65", os.path.join(SOURCE, "main.s"), *includes, *defines, "-g", "-o", program],
                    check=True)
     labels = os.path.join(BUILD, "haunted_house.labels")
-    subprocess.run(["ld65", "-C", LINK_CONFIG, program, "-o", ROM, "-Ln", labels], check=True)
+    memory_map = os.path.join(BUILD, "haunted_house.map")
+    subprocess.run(["ld65", "-C", LINK_CONFIG, program, "-o", ROM, "-Ln", labels, "-m", memory_map],
+                   check=True)
     return ROM
 
 

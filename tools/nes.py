@@ -39,6 +39,12 @@ class GameInfo(C.Structure):
     _fields_ = [("path", C.c_char_p), ("data", C.c_void_p), ("size", C.c_size_t), ("meta", C.c_char_p)]
 
 
+class AvInfo(C.Structure):
+    _fields_ = [("base_width", C.c_uint), ("base_height", C.c_uint), ("max_width", C.c_uint),
+                ("max_height", C.c_uint), ("aspect_ratio", C.c_float), ("fps", C.c_double),
+                ("sample_rate", C.c_double)]
+
+
 class Variable(C.Structure):
     _fields_ = [("key", C.c_char_p), ("value", C.c_char_p)]
 
@@ -57,9 +63,11 @@ class Nes:
         self.lib = C.CDLL(core)
         self.held: set[int] = set()
         self.picture: Picture | None = None
+        self.sound: list[NDArray[np.int16]] = []   # the sound's samples, kept while recording is on
+        self.recording = False
         self.options: dict[bytes, C.c_char_p] = {}
         self._callbacks = [ENV_CB(self._environment), VIDEO_CB(self._video),
-                           AUDIO_CB(lambda left, right: None), AUDIO_BATCH_CB(lambda data, frames: frames),
+                           AUDIO_CB(lambda left, right: None), AUDIO_BATCH_CB(self._sound),
                            POLL_CB(lambda: None), STATE_CB(self._input)]
         setters = (self.lib.retro_set_environment, self.lib.retro_set_video_refresh,
                    self.lib.retro_set_audio_sample, self.lib.retro_set_audio_sample_batch,
@@ -129,6 +137,17 @@ class Nes:
             return
         rows = np.ctypeslib.as_array(C.cast(data, C.POINTER(C.c_uint8)), shape=(height, pitch))
         self.picture = rows[:, :width * 4].reshape(height, width, 4)[..., [2, 1, 0]].copy()
+
+    def _sound(self, data: Any, frames: int) -> int:
+        if self.recording:
+            self.sound.append(np.ctypeslib.as_array(data, shape=(frames * 2,)).reshape(frames, 2).copy())
+        return frames
+
+    def sample_rate(self) -> float:
+        """The sound's samples a second."""
+        info = AvInfo()
+        self.lib.retro_get_system_av_info(C.byref(info))
+        return info.sample_rate
 
     def _input(self, port: int, device: int, index: int, button: int) -> int:
         return 1 if port == 0 and device == DEVICE_JOYPAD and button in self.held else 0

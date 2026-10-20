@@ -12,7 +12,9 @@ predict the original game exactly. Python here is for tools and checks only.
 ```sh
 .venv/bin/python tools/extract.py        # the original mansion from your 2600 ROM -> build/faithful/ (never commit)
 .venv/bin/python tools/make_art.py       # the tiles and sprites from the remaster's NES look -> build/art/
+.venv/bin/python tools/make_music.py     # the soundtrack and effects from the remaster's -> build/sound/
 .venv/bin/python tools/build.py          # build/haunted_house_faithful.nes (ca65 + ld65, src/mmc3.cfg)
+.venv/bin/python tools/record_sound.py NAME 30 6:start 600   # play some frames, save shots/sound/NAME.wav
 .venv/bin/python tools/screenshot.py NAME 30 6:start 60   # play some frames, save shots/NAME.png
 .venv/bin/python tools/profile.py 30 6:start 30 5:a      # cycles per routine for one frame (py65)
 .venv/bin/python tests/test_boot.py      # it boots in the emulator (tools/nes.py, FCEUmm in cores/)

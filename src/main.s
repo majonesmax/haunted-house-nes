@@ -39,6 +39,7 @@ reset:
     jsr wait_for_vblank
     jsr clear_ram         ; the 2600 starts with its RAM cleared
     jsr wait_for_vblank   ; the PPU needs two frames to warm up
+    jsr set_up_sound
     jsr power_on
     lda #$42
     sta ready
@@ -77,6 +78,9 @@ main_loop:
     sta PPU_MASK
 .endif
     jsr prepare_picture
+    lda #5
+    sta work_part
+    jsr audio_frame
 .ifdef PROFILE
     lda #RENDER_ON
     sta PPU_MASK
@@ -159,6 +163,7 @@ read_controller:
 .include "sound.s"
 .include "view.s"
 .include "sprites.s"
+.include "audio.s"
 .include "ppu.s"
 
 .segment "RODATA"
@@ -175,6 +180,7 @@ first_cell_low:     .byte $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00,
 
 .segment "MAPS"
 .include "art.inc"
+.include "sound.inc"
 .segment "RODATA"
 .include "sprites.inc"
 

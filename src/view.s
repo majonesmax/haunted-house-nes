@@ -384,8 +384,11 @@ compose_palettes:
     cpx #16               ; the status palette, and three placeholders the view overwrites
     bne @status
     ldy #0                ; unlit: game 1 sees the walls (dim), games 2-9 black; lightning brightens it
+    lda #0
+    sta lightning_flash
     jsr lightning_now
     bcc @no_lightning
+    inc lightning_flash   ; (the thunder follows it: audio.s)
     ldy #6
     jmp @unlit
 @no_lightning:
