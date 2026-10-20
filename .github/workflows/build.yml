@@ -1,6 +1,6 @@
 # Builds the shareable ROM and checks it, on every push to main and every pull request; on a version tag
 # (git tag v1.0.0 && git push origin v1.0.0) it also makes that release: the ROM, SHA256SUMS.txt and the
-# notes in docs/release-notes/<tag>.md.
+# notes in docs/release-notes/<tag>.md, then puts the "play in your browser" page up (pages.yml).
 #
 # None of it needs the 2600 game: the shareable build is our own mansion, art and rules (tools/shareable.py),
 # and its check runs the remaster's model on that mansion beside the NES (tests/verify_engine.py --shareable).
@@ -80,3 +80,12 @@ jobs:
           gh release create "$GITHUB_REF_NAME" haunted_house.nes SHA256SUMS.txt \
             --title "Haunted House: By Matchlight $GITHUB_REF_NAME" \
             --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"
+
+  site:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

@@ -4,6 +4,8 @@ A native NES game of the Atari 2600 *Haunted House* (1982): the same game, rule 
 mansion - a cellar and four floors - drawn the way the [Haunted House remaster](https://github.com/majonesmax/haunted-house-remastered)'s
 NES look draws it. It runs on any NES emulator, or a real NES with an MMC3 cartridge.
 
+**[▶ Play it in your browser](https://majonesmax.github.io/haunted-house-nes/)** - nothing to install.
+
 <p>
   <img src="docs/media/title.png" width="49%" alt="The title: the mansion at night, the eyes in the tower window">
   <img src="docs/media/ending.png" width="49%" alt="The ending: out of the mansion at dawn, with the urn">
