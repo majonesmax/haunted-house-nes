@@ -46,6 +46,9 @@ place = work_3
 ; the search: up from the bottom row, up from the middle, down into the middle, down into the bottom,
 ; left, right.
 doorways:
+    ldx floor
+    lda crossings_from, x
+    sta crossings_start
     ldx #0
 @crossing:
     lda crossing_direction, x
@@ -62,6 +65,8 @@ doorways:
     sta place
     txa
     asl
+    clc
+    adc crossings_start
     tay
     lda place
     cmp doorway_lines, y
@@ -152,12 +157,9 @@ door_sound:
 ; In: direction. Out: carry set if the way out of this room is locked (or isn't a door).
 door_shut:
     lda room
-    asl
-    asl
-    clc
-    adc direction
-    tay
-    lda door_ids, y
+    ldy direction
+    ldx floor
+    jsr door_way_out
     bmi @shut
     ldy floor
     jmp door_locked
@@ -191,7 +193,7 @@ floor_index:
     cpx #GAME_9
     bne @done
     clc
-    adc #4
+    adc #FLOOR_COUNT
 @done:
     rts
 
@@ -221,21 +223,17 @@ room_changed:
     sta stairs
     rts
 
-bound_direction = work_5
-
 ; In: A = a direction. Out: A = the y limit through the door that way, or 0 for none. (For a side door
 ; this reads past the table's end, as the 2600 does; only "is it 0" is asked of it, and it never is.)
 room_bound:
-    sta bound_direction
-    lda room
-    asl
-    asl
-    clc
-    adc bound_direction
     tay
-    lda door_ids, y
+    lda room
+    ldx floor
+    jsr door_way_out
     bmi @none
     lsr
+    clc
+    adc bounds_from, x
     tay
     lda room_bounds, y
     rts
@@ -260,5 +258,8 @@ stairs_here_value:
     beq @going_down
     lda #GOES_UP
 @going_down:
-    ora stairs_edge, y
+    sta stairs_going
+    on_this_floor rooms_from
+    lda stairs_edge, y
+    ora stairs_going
     rts

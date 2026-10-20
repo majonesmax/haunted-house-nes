@@ -159,6 +159,10 @@ read_controller:
     rts
 
 
+.segment "RODATA"
+.include "mansion.inc"    ; (first: the code's .if and macros need its sizes)
+.segment "CODE"
+.include "mansion.s"
 .include "random.s"
 .include "frame.s"
 .include "moving.s"
@@ -187,7 +191,6 @@ stretched:          ; four pixels, each twice
     .byte $00, $03, $0C, $0F, $30, $33, $3C, $3F, $C0, $C3, $CC, $CF, $F0, $F3, $FC, $FF
 first_cell_high:    .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80
 first_cell_low:     .byte $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00, $00, $00, $00, $00, $00
-.include "mansion.inc"
 
 .segment "MAPS"
 .include "art.inc"

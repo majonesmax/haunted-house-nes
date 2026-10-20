@@ -174,6 +174,10 @@ waypoint_of:
     and #$0F              ; the target
     clc
     adc waypoint_start, y
+    ldx monster           ; on the monster's floor
+    ldy monster_floor, x
+    clc
+    adc waypoints_from, y
     tay
     lda waypoint_x, y
     sta target_x
@@ -307,12 +311,12 @@ try_direction:
     ldx monster
     lda monster_room, x
     sta plan_room
-    asl
-    asl
-    clc
-    adc tried
-    tay
-    lda door_ids, y
+    ldy tried
+    lda monster_floor, x
+    tax
+    lda plan_room
+    jsr door_way_out      ; (on the monster's floor)
+    ldx monster
     cmp #$FF
     beq @no
     cmp #$80
@@ -393,13 +397,10 @@ follow_through_door:
     ror
     ora #(KIND_DOOR << 4)
     sta plan
-    lda room
-    asl
-    asl
-    clc
-    adc work_8
-    tay
-    lda door_ids, y
+    lda room              ; (the player's room and floor, as the original has it)
+    ldy work_8
+    ldx floor
+    jsr door_way_out
     pha
     ora plan
     sta plan
@@ -483,8 +484,11 @@ scatter:
     ldx #4
 @each:
     stx monster
+@pick_floor:
     jsr next_random
-    and #3
+    and #FLOOR_MASK
+    cmp #FLOOR_COUNT
+    bcs @pick_floor       ; (never with four floors: as the original)
     ldx monster
     sta monster_floor, x
     txa
@@ -503,8 +507,11 @@ scatter:
 @placed:
     sta monster_room, x
     sta monster_route, x
+    ldy monster_floor, x  ; the room's centre: waypoints 0-5 on its floor
+    clc
+    adc waypoints_from, y
     tay
-    lda waypoint_x, y     ; the room's centre: waypoints 0-5
+    lda waypoint_x, y
     sta monster_x, x
     lda waypoint_y, y
     sta monster_y, x

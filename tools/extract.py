@@ -37,7 +37,8 @@ TABLES = [
     ("stairs_edge", 0xFD46, 6, "per room, the edge its stairs are on: 0 left, 1 right, 2 top, 3 bottom"),
     ("stairs_x", 0xFF8C, 6, "per room, the x the stairs are drawn at"),
     ("stairs_y", 0xFF88, 4, "per edge, the y the stairs are drawn at"),
-    ("room_bounds", 0xFD7F, 3, "the y limit through the doors above and below, by door number / 2"),
+    ("room_bounds", 0xFD7F, 4, "the y limit through the doors above and below, by door number / 2; "
+     "the 4th, read for a side door, only needs not to be 0"),
     ("room_step", 0xFFD0, 4, "the room number's change through a door: left, right, up, down"),
     ("doorway_lines", 0xFC68, 12, "where each crossing's doorway starts and ends"),
     ("waypoint_start", 0xFFA6, 4, "the first waypoint of each kind of plan"),
@@ -66,6 +67,10 @@ CONSTANTS = [
     ("MASK_WITH_LEFT_DOOR", P.MASK_WITH_LEFT_DOOR[0]), ("MASK_2_WITH_LEFT_DOOR", P.MASK_WITH_LEFT_DOOR[1]),
     ("MASK_WITHOUT", P.MASK_WITHOUT[0]), ("MASK_2_WITHOUT", P.MASK_WITHOUT[1]),
 ]
+# the tables that can differ from floor to floor: the faithful build gives each floor the original's one plan
+PER_FLOOR = {"mansion_walls", "door_ids", "stairs_edge", "stairs_x", "stairs_y", "room_bounds",
+             "doorway_lines", "waypoint_x", "waypoint_y"}
+FLOOR_COUNT = 4
 RANDOM_BITS_FROM = 0xF000   # the mood sound takes bit 0 of the byte at $F000 + a random number
 
 
@@ -89,10 +94,15 @@ def random_bits(rom: bytes) -> bytes:
 
 def include_file(rom: bytes) -> str:
     lines = [HEADER, "", "; the mansion's sizes and places"]
-    lines += [f"{name} = ${value:02X}" for name, value in CONSTANTS] + [""]
+    lines += [f"{name} = ${value:02X}" for name, value in CONSTANTS + [("FLOOR_COUNT", FLOOR_COUNT)]]
+    lines += [f"{label.upper()}_SIZE = {length}" for label, _address, length, _what in TABLES
+              if label in PER_FLOOR] + [""]
     for label, address, length, what in TABLES:
         start = address - R.ROM_START
-        lines += [f"{label}:" + (f"   ; {what}" if what else "")] + byte_lines(rom[start:start + length])
+        data = rom[start:start + length]
+        if label in PER_FLOOR:
+            data, what = data * FLOOR_COUNT, f"{what} (the same plan on each floor)".lstrip(" ")
+        lines += [f"{label}:" + (f"   ; {what}" if what else "")] + byte_lines(data)
     lines += ["", "; the eyes, as the 2600 builds them"]
     lines += [f"{label} = ${R.byte_at(rom, address):02X}" for label, address in EYES]
     lines += ["", "random_bits:   ; bit 0 of the bytes at $F000-$F0FF, eight to a byte"]

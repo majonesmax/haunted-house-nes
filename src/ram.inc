@@ -200,8 +200,15 @@ draw_priority:  .res 1    ; $20: a sprite behind the background
 sprites_from:   .res 1    ; the lines sprites may be drawn on
 sprites_to:     .res 1
 
-; hints.s
+; mansion.s and its users
 .segment "BSS"
+kept_x:         .res 1
+door_direction: .res 1
+crossings_start: .res 1   ; this floor's part of doorway_lines
+stairs_going:   .res 1
+
+; hints.s
+hint_waypoints: .res 1    ; the aim's floor's part of the waypoints
 hint_parts:     .res 24   ; the hint: each line's parts, four string addresses (a 0 high byte: no more)
 spec_slot:      .res 1    ; making it: the next part's place
 hint_slot:      .res 1    ; making a row: the part being put

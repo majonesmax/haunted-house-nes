@@ -168,6 +168,11 @@ wall_at:
     clc
     rts
 @in_the_plan:
+    txa                   ; the row in this floor's plan
+    ldx floor
+    clc
+    adc walls_from, x
+    tax
     ldy column
     lda mansion_walls, x
     and bits, y

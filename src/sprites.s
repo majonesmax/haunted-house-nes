@@ -782,9 +782,11 @@ draw_stairs:
     beq @none
     and #3
     tay
+    on_this_floor edges_from
     lda stairs_y, y
     sta thing_y
     ldy room
+    on_this_floor rooms_from
     lda stairs_x, y
     sta thing_x
     lda #HEIGHT_STAIRS

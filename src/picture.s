@@ -325,10 +325,12 @@ set_stairs_sprite:
     lda stairs_here_now
     and #3
     tay
+    on_this_floor edges_from
     lda stairs_y, y
     jsr line_of
     sta sprite_line
     ldy room
+    on_this_floor rooms_from
     lda stairs_x, y
     sta sprite_x
     lda #SHAPE_HEIGHT_STAIRS

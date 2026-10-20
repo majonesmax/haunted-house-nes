@@ -588,23 +588,30 @@ find_nearest_urn:
     bne @item
     rts
 
-; In: A = x, Y = y on the floor. Out: aim_room: the room whose middle (its first waypoint) is nearest,
+; In: A = x, Y = y on aim_floor. Out: aim_room: the room whose middle (its first waypoint) is nearest,
 ; across and up added (for rooms in a grid, as the original's are, the same room as the nearest straight).
 room_at:
     sta hint_x
     sty hint_y
+    ldx aim_floor
+    lda waypoints_from, x
+    sta hint_waypoints
     ldy #0
 @room:
     lda #0
     sta try_distance
     sta try_distance + 1
+    tya
+    clc
+    adc hint_waypoints
+    tax
     lda hint_x
     sta hint_other
-    lda waypoint_x, y
+    lda waypoint_x, x
     jsr add_difference
     lda hint_y
     sta hint_other
-    lda waypoint_y, y
+    lda waypoint_y, x
     jsr add_difference
     cpy #0
     beq @take
