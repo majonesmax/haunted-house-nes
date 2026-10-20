@@ -478,12 +478,17 @@ def floor_looks(shareable: bool) -> tuple[list["looks.FloorLook"], list[str]]:
         return [look] * FAITHFUL_FLOORS, names
     mansion_pack.main()
     with open(mansion_pack.MANSION_TEXT) as mansion_file:
-        floors = M.parse(mansion_file.read())
+        mansion_text = mansion_file.read()
+    floors = M.parse(mansion_text)
+    ground_floor = M.front_door_floor(mansion_text)
     per_floor = [M.floor_tables(floor) for floor in floors]
     tables = {label: b"".join(made[label] for made in per_floor) for label in per_floor[0]}
     pack = content.Pack(mansion_pack.OUTPUT, bytes(I.IMAGE_SIZE))
     images = [I.floor_image(tables, number, [], bytes(I.RANDOM_BYTES // 8)) for number in range(len(floors))]
-    return [looks.LOOKS["nes"](pack, image) for image in images], [floor.name for floor in floors]
+    # Each stand-in carries one floor's plan, but as a Floors it still says which floor of the mansion has the
+    # front door, so the scenery draws the door there (and not on the cellar, the mansion's floor 0).
+    stand_ins = [R.Floors([image], {}, ground_floor) for image in images]
+    return [looks.LOOKS["nes"](pack, stand_in) for stand_in in stand_ins], [floor.name for floor in floors]
 
 
 def floor_art(floor_set: list["looks.FloorLook"], names: list[str]) -> list[FloorArt]:
