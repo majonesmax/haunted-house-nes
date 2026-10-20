@@ -39,7 +39,10 @@ class Memory:
 
     def __getitem__(self, address: int | slice) -> int | list[int]:
         if isinstance(address, slice):
-            return [self[index] for index in range(*address.indices(0x10000))]
+            return [self.byte(index) for index in range(*address.indices(0x10000))]
+        return self.byte(address)
+
+    def byte(self, address: int) -> int:
         if address < 0x2000:
             return self.ram[address & 0x7FF]
         if address >= PRG_START:

@@ -31,7 +31,7 @@ OUTPUT = os.path.join(ROOT, "build", "art")
 FLOORS = 4
 TILE = 8
 TILES_PER_SET = 256
-FONT_TILES = 64            # tiles 0-63 of each set: the font and the status band's pieces
+FONT_TILES = 160           # tiles 0-159 of each set: the font (white, then grey) and the status band's pieces
 FONT_ORDER = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!.,-:'?<>/"
 SET_BYTES = TILES_PER_SET * 16
 CHR_BYTES = 32 * 1024      # four floor sets and the sprites' set, rounded up to a size the cartridge can be
@@ -108,8 +108,17 @@ def tile_bytes(tile: Indices) -> bytes:
     return bytes(plane(0) + plane(1))
 
 
-def font_tiles() -> list[bytes]:
-    """The remaster's 5x7 font, one glyph a tile in colour 1, in FONT_ORDER; the rest blank."""
+STATUS_COLOURS = [BLACK, 0x30, 0x10, 0x27]   # the status band's palette: white, grey, gold (view.s)
+WHITE_INK, GREY_INK, GOLD_INK = 1, 2, 3
+SLOT = 16                  # an item slot: 2 x 2 tiles with a grey frame
+BAR_TILES = 3              # the burning match: up to 20 px of ember and 3 of flame
+FLAME = 3
+EMBER_ROWS, FLAME_ROWS = (3, 4), (1, 2, 3, 4, 5, 6)
+SLOT_ITEMS = ["key", "scepter"] + [f"urn{shape}:0" for shape in range(2, 9)]
+
+
+def font_glyphs(ink: int) -> list[bytes]:
+    """The remaster's 5x7 font, one glyph a tile in one colour, in FONT_ORDER."""
     tiles = []
     for letter in FONT_ORDER:
         glyph = hud.GLYPHS[letter]
@@ -117,9 +126,71 @@ def font_tiles() -> list[bytes]:
         for row in range(7):
             for column in range(5):
                 if glyph[row * 5 + column] == "#":
-                    tile[row, column + 1] = 1
+                    tile[row, column + 1] = ink
         tiles.append(tile_bytes(tile))
-    return tiles + [bytes(16)] * (FONT_TILES - len(tiles))
+    return tiles
+
+
+def picture_tiles(picture: Indices) -> list[bytes]:
+    """A picture's 8x8 tiles, row by row."""
+    return [tile_bytes(picture[top:top + TILE, left:left + TILE])
+            for top in range(0, picture.shape[0], TILE) for left in range(0, picture.shape[1], TILE)]
+
+
+def status_ink(picture: np.ndarray) -> Indices:
+    """A cast picture in the status band's colours: transparent and black are 0, the rest the nearest."""
+    choices = np.array([NES[code] for code in STATUS_COLOURS[1:]])
+    pixels = picture[..., :3].reshape(-1, 3).astype(int)
+    nearest = ((pixels[:, None] - choices[None]) ** 2).sum(axis=2).argmin(axis=1) + 1
+    solid = (picture[..., 3].reshape(-1) > 0) & (pixels.sum(axis=1) > 0)
+    return np.where(solid, nearest, 0).reshape(picture.shape[:2]).astype(np.uint8)
+
+
+def slot(picture: np.ndarray | None) -> Indices:
+    """A 16 x 16 slot: a grey frame, and the picture (if any) centred in it."""
+    tile = np.zeros((SLOT, SLOT), np.uint8)
+    if picture is not None:
+        inked = status_ink(picture)[:SLOT, :SLOT]
+        top, left = (SLOT - inked.shape[0]) // 2, (SLOT - inked.shape[1]) // 2
+        area = tile[top:top + inked.shape[0], left:left + inked.shape[1]]
+        np.copyto(area, inked, where=inked > 0)
+    tile[0, :] = tile[-1, :] = tile[:, 0] = tile[:, -1] = GREY_INK
+    return tile
+
+
+def bar_tile(ember: int, flame_from: int, flame_to: int) -> bytes:
+    """One tile of the burning match: ember in its first `ember` columns, flame in [flame_from, flame_to)."""
+    tile = np.zeros((TILE, TILE), np.uint8)
+    for row in EMBER_ROWS:
+        tile[row, :ember] = GOLD_INK
+    for row in FLAME_ROWS:
+        tile[row, flame_from:flame_to] = WHITE_INK
+    return tile_bytes(tile)
+
+
+def status_tiles(look: "looks.FloorLook") -> tuple[list[bytes], list[str]]:
+    """The font in white and in grey, then the status band's pieces; and their numbers for the code."""
+    tiles = font_glyphs(WHITE_INK) + font_glyphs(GREY_INK)
+    names = [f"GREY_TEXT = {len(FONT_ORDER)}"]
+    names.append(f"SLOT_EMPTY = {len(tiles)}")
+    tiles += picture_tiles(slot(None))
+    names.append(f"SLOT_ITEMS = {len(tiles)}   ; 4 tiles each: the key, the scepter, urn shapes 2-8")
+    for entry in SLOT_ITEMS:
+        tiles += picture_tiles(slot(cast_picture(look, entry)))
+    names.append(f"BAR_EMBER = {len(tiles)}")
+    tiles.append(bar_tile(TILE, 0, 0))
+    names.append(f"BAR_END = {len(tiles)}   ; + where in the tile the ember ends")
+    tiles += [bar_tile(end, end, min(end + FLAME, TILE)) for end in range(TILE)]
+    names.append(f"BAR_FLAME = {len(tiles) - 1}   ; + how many columns of flame spill into the next tile")
+    tiles += [bar_tile(0, 0, spill) for spill in (1, 2)]
+    names.append(f"LIVES_EYES = {len(tiles)}")
+    eyes = np.zeros((TILE, SLOT), np.uint8)
+    inked = status_ink(cast_picture(look, "eyes_centre"))
+    eyes[1:1 + inked.shape[0], 1:1 + inked.shape[1]] = inked
+    tiles += picture_tiles(eyes)
+    if len(tiles) > FONT_TILES:
+        raise ValueError(f"the status band needs {len(tiles)} tiles; there's room for {FONT_TILES}")
+    return tiles + [bytes(16)] * (FONT_TILES - len(tiles)), names
 
 
 def floor_tiles(indices: Indices) -> tuple[list[bytes], list[int]]:
@@ -174,6 +245,12 @@ def sprite_indices(picture: np.ndarray, codes: list[int]) -> Indices:
     nearest = ((pixels[:, None] - choices[None]) ** 2).sum(axis=2).argmin(axis=1) + 1
     solid = picture[..., 3].reshape(-1) > 0
     return np.where(solid, nearest, 0).reshape(picture.shape[:2]).astype(np.uint8)
+
+
+KIND_COLOURS_CHOSEN = {       # kinds whose three colours are chosen, where the automatic choice lost too much
+    "bat": [BLACK, 0x14, 0x2A],          # purple, with its green eyes
+    "light": [0x07, 0x27, 0x37],         # the hood's brown, the flame's orange, the hand
+}
 
 
 def kind_colours(pictures: list[np.ndarray]) -> list[int]:
@@ -237,7 +314,7 @@ def sprite_include(look: "looks.FloorLook", tiles: SpriteTiles) -> list[str]:
     colour_lines = ["kind_colours:   ; three colours a kind, in KIND_ order"]
     for number, (kind, entries) in enumerate(CAST_KINDS.items()):
         pictures = [cast_picture(look, entry) for entry in entries]
-        codes = kind_colours(pictures)
+        codes = KIND_COLOURS_CHOSEN.get(kind) or kind_colours(pictures)
         lines.append(f"KIND_{kind.upper()} = {number}")
         colour_lines += byte_lines(codes)
         for entry, picture in zip(entries, pictures):
@@ -248,7 +325,20 @@ def sprite_include(look: "looks.FloorLook", tiles: SpriteTiles) -> list[str]:
             lines += byte_lines([value for piece in pieces for value in piece], 16)
     if len(tiles.pairs) > SPRITE_PAIRS:
         raise ValueError(f"the cast needs {len(tiles.pairs)} sprite tile pairs; there's room for 128")
-    return lines + [""] + colour_lines + [""] + monster_tables()
+    return lines + [""] + colour_lines + [""] + monster_tables() + [""] + urn_shimmer(look)
+
+
+URN_SHIMMER = [[BLACK, 0x2C, 0x1C], [BLACK, 0x3C, 0x2C], [BLACK, 0x30, 0x3C], [BLACK, 0x3C, 0x2C]]
+
+
+def urn_shimmer(look: "looks.FloorLook") -> list[str]:
+    """The urn's colours as they cycle - it shimmers, as on the 2600 (where its colour runs off the frame
+    clock): the first is the urn's own (its tiles were cut to it), a step every 8 video frames."""
+    first = kind_colours([cast_picture(look, f"urn{shape}:0") for shape in range(2, 9)])
+    lines = ["urn_shimmer:   ; three colours a step, a step every 8 video frames"]
+    for step in [first] + URN_SHIMMER[1:]:
+        lines += byte_lines(step)
+    return lines + [f"URN_SHIMMER_STEPS = {len(URN_SHIMMER)}"]
 
 
 MONSTER_CAST = ("ghost", "bat", "tarantula2", "tarantula3", "tarantula4")   # monsters 0-4
@@ -291,10 +381,10 @@ def byte_lines(data: list[int], per_line: int = 30) -> list[str]:
 
 def main() -> None:
     look = looks.make("nes", R.load())
-    font = font_tiles()
+    font, status_names = status_tiles(look)
     chr_data = bytearray()
     lines = ["; Made by tools/make_art.py from the remaster's NES look. Never commit this file.", "",
-             f"FONT_TILES = {FONT_TILES}", ""]
+             f"FONT_TILES = {FONT_TILES}"] + status_names + [""]
     for floor in range(FLOORS):
         picture = look.scene(floor).full
         codes = three_colours(picture)

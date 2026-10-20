@@ -35,6 +35,7 @@ touch_mask_low: .res 1
 touch_pixels:   .res 1
 touch_count:    .res 1
 walls_line:     .res 1    ; the line whose walls are in walls_high/low...
+walls_row:      .res 1    ; the wall row whose walls they are
 walls_high:     .res 1
 walls_low:      .res 1
 walls_on_line:  .res 1    ; ...0 if that line isn't on the floor
@@ -73,9 +74,14 @@ was_lit:        .res 32
 changed_index:  .res 64
 changed_value:  .res 64
 status_count:   .res 1
-status_address_high: .res 8
-status_address_low: .res 8
-status_tile:    .res 8
+status_address_high: .res 24
+status_address_low: .res 24
+status_tile:    .res 24
+status_wanted:  .res 24   ; the status band's changing tiles, as they should be...
+status_sent:    .res 24   ; ...and as the PPU has them
+status_place:   .res 1
+status_key:     .res 10   ; what the status band shows, this frame...
+last_status_key: .res 10  ; ...and last
 
 ; sprites.s
 .segment "ZEROPAGE"

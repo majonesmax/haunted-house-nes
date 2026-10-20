@@ -19,6 +19,8 @@ DIM = 2
 LIT = 3
 ALL_UNLIT = $55           ; an attribute byte with all four blocks unlit
 STATUS_COLOURS_END = 4
+BAR_TILE_COUNT = 3
+FLAME = 3
 EYES_LEFT = 8 + 6         ; the eyes' centre on screen: 8 + (x + 4) * 1.5
 LIGHT_ROWS_AROUND = 3     ; blocks above and below the eyes' block that the light may reach
 LIGHT_COLUMNS_AROUND = 2
@@ -876,21 +878,41 @@ write_band_words:
     ldx #0
 @word:
     lda band_words, x
-    beq @done
+    beq @eyes
     bit PPU_STATUS
     sta PPU_ADDRESS
     inx
     lda band_words, x
     sta PPU_ADDRESS
     inx
+    lda band_words, x     ; the ink
+    sta work_0
+    inx
 @letter:
     lda band_words, x
     inx
     cmp #$FF
     beq @word
+    clc
+    adc work_0
     sta PPU_DATA
     jmp @letter
-@done:
+@eyes:                    ; the lives' eyes
+    bit PPU_STATUS
+    lda lives_eyes_place
+    sta PPU_ADDRESS
+    lda lives_eyes_place + 1
+    sta PPU_ADDRESS
+    lda #LIVES_EYES
+    sta PPU_DATA
+    lda #(LIVES_EYES + 1)
+    sta PPU_DATA
+    lda #$FF              ; and send every changing tile afresh
+    ldx #(STATUS_TILES - 1)
+@unsent:
+    sta status_sent, x
+    dex
+    bpl @unsent
     rts
 
 ; The floor's name, centred in the band below (its row cleared first).
@@ -943,44 +965,284 @@ write_floor_name:
 @done:
     rts
 
-; The numbers: matches used, lives, the game and the floor.
+; The status band's changing tiles (status_places, in order): the matches used, the burning match, what's
+; held, the urn so far, lives, the game and the floor. Each frame they're worked out into status_wanted
+; (X counts through them); those that differ from status_sent are listed for the NMI.
+STATUS_TILES = 24
+STATUS_KEY_BYTES = 10
 compose_status:
+    jsr status_key_changed
+    bcs @work_it_out
+    lda #0                ; nothing it shows has changed
+    sta status_count
+    rts
+@work_it_out:
     ldx #0
     lda matches_used
     lsr
     lsr
     lsr
     lsr
-    jsr add_digit
+    jsr want_digit
     lda matches_used
     and #$0F
-    jsr add_digit
+    jsr want_digit
+    jsr want_match_bar
+    jsr want_held
+    jsr want_urn
     lda lives
-    jsr add_digit
+    jsr want_digit
     lda game_number
     clc
-    adc #1
-    jsr add_digit
+    adc #(1 + GREY_TEXT)
+    jsr want_digit
     lda shown_floor
     clc
-    adc #1
-    jsr add_digit
-    stx status_count
+    adc #(1 + GREY_TEXT)
+    jsr want_digit
+    jmp list_changed_status
+
+; Out: carry set if anything the status band shows has changed since last frame.
+status_key_changed:
+    lda matches_used
+    sta status_key
+    lda flags
+    and #MATCH_LIT
+    beq @unlit
+    lda match_time        ; (the burning match only while lit)
+@unlit:
+    sta status_key + 1
+    lda carried
+    sta status_key + 2
+    lda urn_shapes
+    sta status_key + 3
+    lda urn_shapes + 1
+    sta status_key + 4
+    lda urn_shapes + 2
+    sta status_key + 5
+    lda lives
+    sta status_key + 6
+    lda game_number
+    sta status_key + 7
+    lda shown_floor
+    sta status_key + 8
+    lda status_sent       ; the bands redrawn: everything goes again
+    sta status_key + 9
+    ldx #(STATUS_KEY_BYTES - 1)
+    clc
+@compare:
+    lda status_key, x
+    cmp last_status_key, x
+    beq @same
+    sta last_status_key, x
+    sec
+@same:
+    dex
+    bpl @compare
     rts
 
-; In: A = a digit 0-9, X = its place in the list (status_places). Out: X + 1.
-add_digit:
+; In: A = a digit (plus GREY_TEXT for grey), X = its place. Out: X + 1.
+want_digit:
     clc
     adc #DIGIT_ZERO
-    sta status_tile, x
+; In: A = a tile, X = its place. Out: X + 1, A kept.
+want_tile:
+    sta status_wanted, x
+    inx
+    rts
+
+; The burning match: the ember as long as the seconds left, in pixels, then 3 of flame (3 tiles).
+bar_length = work_9
+bar_pixel = work_10
+want_match_bar:
+    lda flags
+    and #MATCH_LIT
+    bne @lit
+    lda #0
+    jsr want_tile
+    jsr want_tile
+    jmp want_tile
+@lit:
+    lda match_time
+    sta bar_length
+    lda #0
+    sta bar_pixel         ; the tile's first pixel
+@tile:
+    lda bar_pixel
+    clc
+    adc #7
+    cmp bar_length
+    bcs @not_all_ember
+    lda #BAR_EMBER        ; the whole tile is ember
+    jmp @found
+@not_all_ember:
+    lda bar_length
+    sec
+    sbc bar_pixel
+    bcc @spill
+    clc                   ; the ember ends in this tile, and the flame starts
+    adc #BAR_END
+    jmp @found
+@spill:
+    eor #$FF              ; past the end: the flame's first (tile's first - length) columns are behind;
+    clc                   ; 3 - that spill into this tile
+    adc #1
+    sta work_11
+    lda #FLAME
+    sec
+    sbc work_11
+    beq @blank
+    bmi @blank
+    clc
+    adc #BAR_FLAME
+    jmp @found
+@blank:
+    lda #0
+@found:
+    jsr want_tile
+    lda bar_pixel
+    clc
+    adc #8
+    sta bar_pixel
+    cmp #(8 * BAR_TILE_COUNT)
+    bne @tile
+    rts
+
+; What's held: its slot (2 x 2 tiles), or an empty one.
+want_held:
+    lda carried
+    cmp #NOTHING
+    beq @empty
+    cmp #URN
+    bcc @item             ; the key 0 or the scepter 1
+    tay
+    lda urn_shapes - URN, y   ; an urn piece: its shape, 2-8
+@item:
+    asl
+    asl
+    clc
+    adc #SLOT_ITEMS
+    jmp want_slot
+@empty:
+    lda #SLOT_EMPTY
+; In: A = a slot's first tile, X = its place. Its four tiles, in order. Out: X + 4.
+want_slot:
+    jsr want_tile
+    clc
+    adc #1
+    jsr want_tile
+    clc
+    adc #1
+    jsr want_tile
+    clc
+    adc #1
+    jmp want_tile
+
+; The urn so far (the remaster's rule): the pieces held, or else the biggest group of pieces joined
+; together - a lone piece on the floor doesn't count. A slot for each piece, filled if it's in.
+urn_best = work_9
+urn_piece = work_10
+want_urn:
+    stx status_place
+    lda carried
+    cmp #NOTHING
+    beq @on_the_floor
+    cmp #URN
+    bcc @on_the_floor
+    tay
+    lda urn_shapes - URN, y
+    jsr shape_pieces
+    sta urn_best
+    jmp @slots
+@on_the_floor:
+    lda #0
+    sta urn_best
+    ldx #0
+@group:
+    lda urn_shapes, x
+    jsr shape_pieces
+    tay
+    lda pieces_counted, y
+    sta work_11
+    ldy urn_best
+    lda pieces_counted, y
+    cmp work_11
+    bcs @not_bigger
+    lda urn_shapes, x
+    jsr shape_pieces
+    sta urn_best
+@not_bigger:
+    inx
+    cpx #3
+    bne @group
+    ldy urn_best          ; one piece alone isn't the urn mended
+    lda pieces_counted, y
+    cmp #2
+    bcs @slots
+    lda #0
+    sta urn_best
+@slots:
+    ldx status_place
+    lda #0
+    sta urn_piece
+@slot:
+    ldy urn_piece
+    lda urn_best
+    and bits, y
+    beq @empty
+    tya                   ; piece 2-4's own slot: shape 2-4
+    clc
+    adc #URN
+    asl
+    asl
+    clc
+    adc #SLOT_ITEMS
+    jmp @want
+@empty:
+    lda #SLOT_EMPTY
+@want:
+    jsr want_slot
+    inc urn_piece
+    lda urn_piece
+    cmp #3
+    bne @slot
+    rts
+
+; In: A = an urn shape. Out: A = its pieces, a bit each ($FF, joined into another: none). Uses Y.
+shape_pieces:
+    cmp #9
+    bcs @none
+    tay
+    lda pieces_of_shape, y
+    rts
+@none:
+    lda #0
+    rts
+
+list_changed_status:
+    ldy #0
+    ldx #0
+@each:
+    lda status_wanted, x
+    cmp status_sent, x
+    beq @same
+    sta status_sent, x
+    sta status_tile, y
+    stx status_place
     txa
     asl
-    tay
-    lda status_places, y
-    sta status_address_high, x
-    lda status_places + 1, y
-    sta status_address_low, x
+    tax
+    lda status_places, x
+    sta status_address_high, y
+    lda status_places + 1, x
+    sta status_address_low, y
+    ldx status_place
+    iny
+@same:
     inx
+    cpx #STATUS_TILES
+    bne @each
+    sty status_count
     rts
 
 .segment "RODATA"
@@ -995,24 +1257,49 @@ palette_bits:     ; a palette 0-3 in each of the four blocks of an attribute byt
 floor_maps:       .word floor1_map, floor2_map, floor3_map, floor4_map
 floor_colours:    .word floor1_colours, floor2_colours, floor3_colours, floor4_colours
 floor_names:      .word floor1_name, floor2_name, floor3_name, floor4_name
-status_places:    ; where each number goes: matches (two digits), lives, game, floor
-    place STATUS_VALUES_ROW, 1
+status_places:    ; where each changing tile goes (compose_status's order)
+    place STATUS_VALUES_ROW, 1          ; the matches used
     place STATUS_VALUES_ROW, 2
-    place STATUS_VALUES_ROW, 29
-    place GAME_ROW, 6
-    place GAME_ROW, 30
-band_words:       ; where, then the letters, $FF; a 0 ends the list
+    place STATUS_VALUES_ROW, 3          ; the burning match
+    place STATUS_VALUES_ROW, 4
+    place STATUS_VALUES_ROW, 5
+    place STATUS_VALUES_ROW, 11         ; what's held
+    place STATUS_VALUES_ROW, 12
+    place STATUS_VALUES_ROW + 1, 11
+    place STATUS_VALUES_ROW + 1, 12
+    place STATUS_VALUES_ROW, 15         ; the urn's three slots
+    place STATUS_VALUES_ROW, 16
+    place STATUS_VALUES_ROW + 1, 15
+    place STATUS_VALUES_ROW + 1, 16
+    place STATUS_VALUES_ROW, 17
+    place STATUS_VALUES_ROW, 18
+    place STATUS_VALUES_ROW + 1, 17
+    place STATUS_VALUES_ROW + 1, 18
+    place STATUS_VALUES_ROW, 19
+    place STATUS_VALUES_ROW, 20
+    place STATUS_VALUES_ROW + 1, 19
+    place STATUS_VALUES_ROW + 1, 20
+    place STATUS_VALUES_ROW, 28         ; lives
+    place GAME_ROW, 6                   ; the game
+    place GAME_ROW, 30                  ; the floor
+pieces_of_shape:  .byte 0, 0, 1, 2, 4, 3, 5, 6, 7   ; an urn shape's pieces, a bit each
+pieces_counted:   .byte 0, 1, 1, 2, 1, 2, 2, 3      ; how many bits
+band_words:       ; where, the ink (0 white, GREY_TEXT grey), the letters, $FF; a 0 ends the list
     place STATUS_LABELS_ROW, 1
-    .byte "MATCHES", $FF
-    place STATUS_LABELS_ROW, 13
-    .byte "HOLD", $FF
-    place STATUS_LABELS_ROW, 26
-    .byte "LIVES", $FF
-    place STATUS_VALUES_ROW, 28
-    .byte "X", $FF
+    .byte GREY_TEXT, "MATCHES", $FF
+    place STATUS_LABELS_ROW, 10
+    .byte GREY_TEXT, "HOLD", $FF
+    place STATUS_LABELS_ROW, 16
+    .byte GREY_TEXT, "URN", $FF
+    place STATUS_LABELS_ROW, 25
+    .byte GREY_TEXT, "LIVES", $FF
+    place STATUS_VALUES_ROW, 27
+    .byte 0, "X", $FF
     place GAME_ROW, 1
-    .byte "GAME", $FF
+    .byte GREY_TEXT, "GAME", $FF
     place GAME_ROW, 24
-    .byte "FLOOR", $FF
+    .byte GREY_TEXT, "FLOOR", $FF
     .byte 0
+lives_eyes_place:
+    place STATUS_VALUES_ROW, 25
 .segment "CODE"

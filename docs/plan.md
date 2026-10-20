@@ -56,13 +56,13 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    is the remaster's own check with the NES in place of the 2600: over three runs of 90,000 frames the
    NES's state matches the model on every frame it compares, and the NES never takes longer than a frame.
    Nothing is drawn yet; the game runs without a picture or sound.
-4. **The picture** - mostly done: the screen split into a status band, the view and a band below (MMC3
-   scanline interrupts); each floor's tiles and map made from the remaster's floor pictures
-   (`tools/make_art.py`), streamed in as the view scrolls; the dark, the match's light and lightning by
-   palettes; the cast as sprites, all of them every frame, with palettes handed out to what's on screen.
-   Still to do: the status band's item slots, the urn's shimmer, an art pass (the bat lost its green eyes and
-   the hand its flame in three colours), and trimming the sprites' work before the sound needs time - the
-   busiest frame has about 5,000 cycles to spare (`tools/profile.py`).
+4. **The picture** - done: the screen split into a status band, the view and a band below (MMC3 scanline
+   interrupts); each floor's tiles and map made from the remaster's floor pictures (`tools/make_art.py`),
+   streamed in as the view scrolls; the dark, the match's light and lightning by palettes; the cast as
+   sprites, all of them every frame, with sprite palettes handed out to what's on screen and the urn
+   shimmering by palette; the status band as the remaster's - the burning match, the held item, the urn so
+   far, lives - sending only what changed. The busiest frame (dropping by a wall with a match lit) keeps
+   about 5,800 of its 29,780 cycles spare (`tools/profile.py`). Possible later: a rounder light.
 5. **The sound**: the NES's sound chip playing the remaster's NES-look effects and music.
 6. **The remaster's extras**: the title screen and story, G's hints, the lights-on cheat, the storm, the
    ending.

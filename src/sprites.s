@@ -106,17 +106,38 @@ compose_sprite_palettes:
     lda slot_kind, x
     cmp #NO_KIND
     beq @next
+    stx work_1
+    cmp #KIND_URN
+    beq @urn
     sta work_0            ; kind * 3
     asl
     clc
     adc work_0
-    stx work_1
     tax
     lda kind_colours, x
     sta palette_buffer + SPRITE_PALETTES + 1, y
     lda kind_colours + 1, x
     sta palette_buffer + SPRITE_PALETTES + 2, y
     lda kind_colours + 2, x
+    sta palette_buffer + SPRITE_PALETTES + 3, y
+    ldx work_1
+    jmp @next
+@urn:                     ; the urn shimmers: its colours cycle, a step every 8 frames
+    lda animation_clock
+    lsr
+    lsr
+    lsr
+    and #(URN_SHIMMER_STEPS - 1)
+    sta work_0
+    asl
+    clc
+    adc work_0
+    tax
+    lda urn_shimmer, x
+    sta palette_buffer + SPRITE_PALETTES + 1, y
+    lda urn_shimmer + 1, x
+    sta palette_buffer + SPRITE_PALETTES + 2, y
+    lda urn_shimmer + 2, x
     sta palette_buffer + SPRITE_PALETTES + 3, y
     ldx work_1
 @next:

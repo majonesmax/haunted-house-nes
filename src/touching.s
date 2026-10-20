@@ -243,6 +243,7 @@ spread_row:
 start_walls:
     lda #$FF
     sta walls_line        ; no line's walls worked out yet
+    sta walls_row         ; nor any wall row's
     lda sprite_x
     ldx sprite_wide
     beq @found
@@ -281,8 +282,6 @@ row_hits_wall:
 line_walls:
     sta walls_line
     lda #0
-    sta walls_high
-    sta walls_low
     sta walls_on_line
     lda wall_line         ; the floor y: wall_line - eyes_line + player_y, if it's on the floor at all
     sec
@@ -305,6 +304,12 @@ line_walls:
     lsr
     lsr
     sta touch_wall_row
+    cmp walls_row         ; the walls change only from one wall row (16 units) to the next
+    beq @done
+    sta walls_row
+    lda #0
+    sta walls_high
+    sta walls_low
     lda touch_column      ; the first cell's columns: 16 - (column mod 16)
     and #15
     tax
