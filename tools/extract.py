@@ -9,10 +9,15 @@ What it takes, and why (the remaster's docs/spec.md has what each one means):
   The pictures shown are our own; these only decide what touches what, so the game plays the same;
 - the 256 code bytes whose lowest bits the monster-noise sound uses as random numbers.
 
+It must be the NTSC cartridge (Atari CX2654), MD5 f0a6e99f5875891246c3dbecbf2d2cea - the one the remaster
+worked everything out on; the tables are read from fixed places in it, so another ROM would make a broken
+build. docs/faithful-build.md has the whole recipe.
+
 Usage: python tools/extract.py [path to your Haunted House ROM]
        (default: ../haunted-house/roms/haunted_house.a26, the remaster's)
 """
 
+import hashlib
 import os
 import sys
 
@@ -23,6 +28,7 @@ from game import player as P  # noqa: E402
 from game import rom as R  # noqa: E402
 
 DEFAULT_ROM = os.path.join(REMASTER, "roms", "haunted_house.a26")
+KNOWN_MD5 = "f0a6e99f5875891246c3dbecbf2d2cea"   # Haunted House, NTSC (Atari CX2654)
 OUTPUT = os.path.join(ROOT, "build", "faithful", "mansion.inc")
 BYTES_PER_LINE = 16
 HEADER = "; The original mansion, read from your 2600 ROM by tools/extract.py. Never commit this file."
@@ -123,9 +129,23 @@ def include_file(rom: bytes) -> str:
     return include_text(HEADER, constants, tables, eyes, random_bits(rom))
 
 
+def checked_rom(rom_path: str) -> bytes:
+    """The ROM, if it's there and it's the one the tables are known for; otherwise, say what to do."""
+    if not os.path.exists(rom_path):
+        sys.exit(f"No 2600 ROM at {rom_path}.\nThe faithful build reads the original's mansion from your own "
+                 "copy of Haunted House: put it there (see docs/faithful-build.md).")
+    with open(rom_path, "rb") as rom_file:
+        fingerprint = hashlib.md5(rom_file.read()).hexdigest()
+    if fingerprint != KNOWN_MD5:
+        sys.exit(f"{rom_path} isn't the Haunted House cartridge this build knows (its MD5 is {fingerprint};\n"
+                 f"the NTSC cartridge, Atari CX2654, is {KNOWN_MD5}). Its tables would be read from the "
+                 "wrong places.")
+    return R.load(rom_path)
+
+
 def main() -> None:
     rom_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_ROM
-    rom = R.load(rom_path)
+    rom = checked_rom(rom_path)
     os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
     with open(OUTPUT, "w") as include:
         include.write(include_file(rom))

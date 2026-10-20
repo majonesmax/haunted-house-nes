@@ -55,8 +55,10 @@ git clone https://github.com/majonesmax/haunted-house-remastered ../haunted-hous
 .venv/bin/python tests/verify_engine.py --shareable   # it plays exactly as the model says
 ```
 
-The faithful build: put your own copy of the 2600 game at `../haunted-house/roms/haunted_house.a26`, then
-`.venv/bin/python tools/build.py` (and `tests/verify_engine.py` without `--shareable`).
+**The faithful build** - the original's own mansion, built from your copy of the 2600 game (the NTSC
+cartridge, MD5 `f0a6e99f5875891246c3dbecbf2d2cea`) and never shared: [docs/faithful-build.md](docs/faithful-build.md)
+has the recipe, step by step. In short: your ROM at `../haunted-house/roms/haunted_house.a26`, then
+`.venv/bin/python tools/build.py`.
 
 ## License
 
