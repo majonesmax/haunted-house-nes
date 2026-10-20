@@ -47,10 +47,12 @@ RANDOM_SEED = "haunted house nes"
 NEW_GAME = [9, 0xFF, 0x7F, 0x02, 0xFF, 0x0F, 2, 2, 3, 4]
 ROOM_STEP = [1, 0xFF, 2, 0xFE]          # through a door: left +1, right -1, up +2, down -2 (the spec's)
 WAYPOINT_START = [0, M.ROOM_COUNT, M.ROOM_COUNT + M.DOOR_COUNT, M.ROOM_COUNT + M.DOOR_COUNT]
-# per monster (ghost, bat, three tarantulas): the frames of every 8 it steps on while chasing, a bit each;
-# wandering is always frames 3 and 7, so each chases faster than it wanders, and all slower than you
-MONSTER_SPEED = [0b01010101, 0b01011011, 0b01001001, 0b10010010, 0b00100101]
-MONSTER_SPEED_FAST = [0b01110111, 0b01111111, 0b01010101, 0b10101010, 0b01011011]   # games 8-9
+# per monster (ghost, bat, three tarantulas): the frames of every 8 it steps on while chasing, a bit each.
+# As many steps as the original's (the remaster's game/rom.py says how many): ghost 4, bat 3, tarantulas 2;
+# in games 8-9 ghost and bat 4, tarantulas 3. Which frames is our own, spread through the 8, the tarantulas
+# each a frame apart. (Wandering is always frames 3 and 7.)
+MONSTER_SPEED = [0b01010101, 0b00100101, 0b00010001, 0b00100010, 0b01000100]
+MONSTER_SPEED_FAST = [0b01010101, 0b10101010, 0b00100101, 0b01001010, 0b10010100]   # games 8-9
 # per monster, taken from the player's place for the point it heads for: the ghost and the bat come
 # straight at you, the tarantulas from below, from the left, and from both
 CHASE_OFFSET_X = [0, 0, 0, 8, 8]

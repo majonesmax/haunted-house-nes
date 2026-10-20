@@ -11,6 +11,7 @@
     .byte $41, 0          ; mapper 4 (MMC3)
     .res 8, 0
 
+RANDOM_SEED = $5AC3       ; any but 0: then how long the player takes to press Start decides the game
 PPU_CONTROL = $2000
 PPU_MASK    = $2001
 PPU_STATUS  = $2002
@@ -38,7 +39,22 @@ reset:
     sta PPU_MASK
     jsr set_up_board
     jsr wait_for_vblank
-    jsr clear_ram         ; the 2600 starts with its RAM cleared
+    lda random_low        ; the random numbers: the 2600 never clears them, so each game comes from
+    pha                   ; what its RAM held at power-on, stirred every frame after; keep the NES's
+    lda random_high
+    pha
+    jsr clear_ram         ; the rest of the 2600's RAM starts cleared
+    pla
+    sta random_high
+    pla
+    sta random_low
+    ora random_high       ; all zeros would stay zeros forever (an emulator's RAM starts so): a seed
+    bne @seeded
+    lda #<RANDOM_SEED
+    sta random_low
+    lda #>RANDOM_SEED
+    sta random_high
+@seeded:
     jsr wait_for_vblank   ; the PPU needs two frames to warm up
     jsr set_up_sound
     jsr power_on
