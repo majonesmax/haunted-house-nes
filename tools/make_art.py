@@ -33,6 +33,7 @@ from game import guide  # noqa: E402
 from looks.nes import look as NL  # noqa: E402
 from shared import hud  # noqa: E402
 import content  # noqa: E402
+import floor_colours as FC  # noqa: E402
 import mansion as M  # noqa: E402
 import mansion_pack  # noqa: E402
 import rom_image as I  # noqa: E402
@@ -46,18 +47,17 @@ FONT_TILES = 160           # tiles 0-159 of each set: the font (white, then grey
 FONT_ORDER = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!.,-:'?<>/"
 SET_BYTES = TILES_PER_SET * 16
 CHR_BYTES = 64 * 1024      # up to eight floor sets, the sprites' set, the title's and the ending's
-MAPS_SEGMENTS = ("MAPS", "MAPS_2")   # the floors' maps: four to a bank (src/mmc3.cfg)...
+MAPS_SEGMENTS = ("MAPS", "MAPS_2")   # the floors' maps: three to a bank (src/mmc3.cfg)...
 MAPS_BANKS = (0, 3)                  # ...in program banks 0 and 3
-FLOORS_PER_BANK = 4
+FLOORS_PER_BANK = 3        # (with every floor's colours, blocks, names and light first: see shared_block)
 FAITHFUL_SONGS = ["floor1", "floor2", "floor3", None]   # the classic floors' songs; the attic is quiet
 MANSION_MUSIC = os.path.join(ROOT, "mansion", "music.json")   # the shareable build's: its floor_songs
 BLACK = 0x0F
 COLOURS = 3
 KMEANS_ROUNDS = 25
 NES = np.array(PAL.NES, int)
-DIM_ROW, FLASH_ROWS = 0x10, 0x20   # a palette row darker; two rows lighter
 LIGHT_HALF_WIDTH, LIGHT_HALF_HEIGHT = 24, 28   # px: the match's reach (the remaster's 16 units by 14 lines)
-LIGHT_CORE, LIGHT_EDGE = 0.9, 1.3   # fully lit within this much of the reach; dim out to this
+LIGHT_REACH = 1.1                   # a block is lit within this much of the match's reach
 LIGHT_STEP = 4                      # the light table's steps, in px
 LIGHT_STEPS = 16
 
@@ -92,31 +92,6 @@ def nes_code(rgb: np.ndarray) -> int:
     distances = ((NES - rgb) ** 2).sum(axis=1).astype(float)
     distances[[0x0D, 0x0E, 0x1D, 0x1E, 0x1F, 0x2E, 0x2F, 0x3E, 0x3F]] = np.inf
     return int(distances.argmin())
-
-
-def three_colours(picture: np.ndarray) -> list[int]:
-    """The three NES colours that best stand for a picture's non-black colours (a weighted k-means), dark
-    first."""
-    colours, counts = np.unique(picture.reshape(-1, 3), axis=0, return_counts=True)
-    keep = colours.sum(axis=1) > 0
-    distinct, weights = colours[keep].astype(float), counts[keep].astype(float)
-    centres = distinct[np.argsort(-weights)[:COLOURS]]
-    for _ in range(KMEANS_ROUNDS):
-        nearest = ((distinct[:, None] - centres[None]) ** 2).sum(axis=2).argmin(axis=1)
-        for index in range(COLOURS):
-            mine = nearest == index
-            if mine.any():
-                centres[index] = (distinct[mine] * weights[mine, None]).sum(axis=0) / weights[mine].sum()
-    codes = [nes_code(centre) for centre in centres]
-    return sorted(codes, key=lambda code: NES[code].sum())
-
-
-def to_indices(picture: np.ndarray, codes: list[int]) -> Indices:
-    """Each pixel as 0 (black) or 1-3 (the codes' colours), whichever is nearest."""
-    choices = np.vstack([[0, 0, 0]] + [NES[code] for code in codes])
-    pixels = picture.reshape(-1, 3).astype(int)
-    nearest = ((pixels[:, None] - choices[None]) ** 2).sum(axis=2).argmin(axis=1)
-    return nearest.reshape(picture.shape[:2]).astype(np.uint8)
 
 
 def tile_bytes(tile: Indices) -> bytes:
@@ -230,23 +205,15 @@ def floor_tiles(indices: Indices) -> tuple[list[bytes], list[int]]:
     return tiles, tile_map
 
 
-def palettes(codes: list[int]) -> list[int]:
-    """The floor's colours lit, dim (a row darker) and in a lightning flash (two rows lighter)."""
-    dim = [code - DIM_ROW if code >= DIM_ROW else code for code in codes]   # the darkest row stays: game 1
-                                                                            # must still see dark walls
-    flash = [min(code + FLASH_ROWS, 0x30 + (code & 0x0F)) for code in codes]
-    return codes + dim + flash
-
-
 def light_table() -> list[int]:
     """The light at a block whose centre is (across, down) px from the eyes, in LIGHT_STEP steps of each:
-    2 lit, 1 dim, 0 unlit. Row by row of `down`."""
+    2 lit, 0 unlit (hard-edged: there's no palette for dim - docs/decisions.md). Row by row of `down`."""
     levels = []
     for down in range(LIGHT_STEPS):
         for across in range(LIGHT_STEPS):
             centre_x, centre_y = (across + 0.5) * LIGHT_STEP, (down + 0.5) * LIGHT_STEP
             reach = np.hypot(centre_x / LIGHT_HALF_WIDTH, centre_y / LIGHT_HALF_HEIGHT)
-            levels.append(2 if reach <= LIGHT_CORE else 1 if reach <= LIGHT_EDGE else 0)
+            levels.append(2 if reach <= LIGHT_REACH else 0)
     return levels
 
 
@@ -493,10 +460,11 @@ def text_lines() -> list[str]:
 
 
 class FloorArt(NamedTuple):
-    """One floor's pictures, made: its tile map, its colours, its name."""
+    """One floor's pictures, made: its tile map, its palettes, which blocks take the floor's, its name."""
     tile_map: list[int]
     tiles: list[bytes]
     colours: list[int]
+    kinds: list[int]
     name: str
 
 
@@ -521,10 +489,11 @@ def floor_looks(shareable: bool) -> tuple[list["looks.FloorLook"], list[str]]:
 def floor_art(floor_set: list["looks.FloorLook"], names: list[str]) -> list[FloorArt]:
     made = []
     for floor, (look, name) in enumerate(zip(floor_set, names)):
-        picture = look.scene(floor).full
-        codes = three_colours(picture)
-        tiles, tile_map = floor_tiles(to_indices(picture, codes))
-        made.append(FloorArt(tile_map, tiles, palettes(codes), name.upper()))
+        scene = look.scene(floor)
+        colours = FC.choose(scene.full, scene.walls)
+        indices, kinds = FC.cut(scene.full, colours)
+        tiles, tile_map = floor_tiles(indices)
+        made.append(FloorArt(tile_map, tiles, FC.palette_bytes(colours), FC.kind_bytes(kinds), name.upper()))
     return made
 
 
@@ -534,12 +503,17 @@ def shared_block(floors: list[FloorArt], labelled: bool) -> list[str]:
     lines = []
     for number, floor in enumerate(floors):
         label = f"floor{number + 1}_colours:" if labelled else ";"
-        lines += [f"{label}   ; lit, dim, lightning"] + byte_lines(floor.colours, 9)
+        lines += [f"{label}   ; the walls' palette, the floor's, the dark, lightning"]
+        lines += byte_lines(floor.colours, 12)
+    for number, floor in enumerate(floors):
+        label = f"floor{number + 1}_kinds:" if labelled else ";"
+        lines += [f"{label}   ; per block row, 16 bits: the blocks in the floor's palette"]
+        lines += byte_lines(floor.kinds, 16)
     for number, floor in enumerate(floors):
         label = f"floor{number + 1}_name:" if labelled else ""
         lines += [f'{label} .byte "{floor.name}", $FF']   # (0 is a space)
     label = "light_levels:" if labelled else ";"
-    lines += [f"{label}   ; by (down, across) from the eyes, 4 px steps: 2 lit, 1 dim, 0 unlit"]
+    lines += [f"{label}   ; by (down, across) from the eyes, 4 px steps: 2 lit, 0 unlit"]
     return lines + byte_lines(light_table(), LIGHT_STEPS)
 
 
@@ -565,6 +539,7 @@ def floors_include(floors: list[FloorArt], songs: list[str]) -> list[str]:
             "floor_maps:   .word " + ", ".join(f"floor{number}_map" for number in numbers),
             "floor_colours: .word " + ", ".join(f"floor{number}_colours" for number in numbers),
             "floor_names:  .word " + ", ".join(f"floor{number}_name" for number in numbers),
+            "floor_kinds:  .word " + ", ".join(f"floor{number}_kinds" for number in numbers),
             "floor_banks:  .byte " + ", ".join(str(MAPS_BANKS[(number - 1) // FLOORS_PER_BANK])
                                                 for number in numbers),
             "floor_songs:  .byte " + ", ".join(songs)]

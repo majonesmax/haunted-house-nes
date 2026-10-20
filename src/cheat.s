@@ -24,6 +24,9 @@ play_buttons:
     lda lights_on
     eor #1
     sta lights_on
+    lda #$FF              ; the floor drawn again, every block in the palette it should have
+    sta shown_floor
+    sta cheat_row_due
     lda #1
     sta cheat_used
     sta lights_note_due

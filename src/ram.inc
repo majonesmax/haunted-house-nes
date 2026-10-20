@@ -161,6 +161,14 @@ was_sound:      .res 1
 ; screens.s
 .segment "ZEROPAGE"
 text_pointer:   .res 2    ; a string being put on a word row
+kinds_pointer:  .res 2    ; the light: the floor's blocks' palettes (view.s)
+.segment "BSS"
+row_kinds:      .res 2    ; ...this block row's, a bit per column
+cheat_row_due:  .res 1    ; the cheat: an attribute row to work out again ($FF: none)
+cheat_row:      .res 1
+cheat_top:      .res 2
+cheat_left:     .res 1
+.segment "ZEROPAGE"
 .segment "BSS"
 screen_wanted:  .res 1    ; the screen this moment wants...
 screen_shown:   .res 1    ; ...and the one in the first nametable

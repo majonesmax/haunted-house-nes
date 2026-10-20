@@ -9,8 +9,9 @@ floor of the game. tools/mansion_pack.py turns it into PNGs in build/, for the r
     5  The Nursery     pink and cream stripes with stars; big yellow and blue checks; a clock, toy blocks
     6  The Attic       the classic attic: bare planks, rough boards, cobwebs and crates
 
-Each floor ends up in three NES colours and black (tools/make_art.py chooses them), so each keeps to about
-three families of colour. Colours are NES palette numbers.
+Each floor ends up in four NES colours and black (tools/floor_colours.py: the walls' two and the floor's two),
+so each keeps to about that, and draws its fine detail - mortar, seams, grout - in black, which is free
+(docs/decisions.md). Colours are NES palette numbers.
 """
 
 import os
@@ -165,8 +166,8 @@ DDDDDDDDDD
 
 GALLERY = {
     "paper": (LOZENGE, {"P": 0x04, "p": 0x14}),
-    "floor": ("motif", BOARDS, {"w": 0x17, "D": 0x07, "h": 0x27}),
-    "top": (manor.MASONRY, {"n": 0x04, "m": 0x03}),
+    "floor": ("motif", BOARDS, {"w": 0x17, "D": 0x0F, "h": 0x27}),
+    "top": (manor.MASONRY, {"n": 0x04, "m": 0x0F}),
     "trim": 0x14,
     "decor": [{"kind": "portrait", "art": manor.PORTRAIT, "eyes": True,
                "colours": {"G": 0x27, "d": 0x04, "q": 0x14, "f": 0x37, "K": 0x0F, "W": 0x30, "c": 0x16}},
@@ -186,14 +187,21 @@ BEDROOMS = {
 NURSERY = {
     "paper": (NURSERY_STRIPES, {"p": 0x25, "c": 0x37, "y": 0x28}),
     "floor": ("motif", CHECKS, {"y": 0x28, "B": 0x21}),
-    "top": (manor.MASONRY, {"n": 0x15, "m": 0x05}),
+    "top": (manor.MASONRY, {"n": 0x15, "m": 0x0F}),
     "trim": 0x25,
     "decor": [{"kind": "clock", "art": CLOCK, "colours": {"D": 0x07, "w": 0x17, "W": 0x30, "K": 0x0F,
                                                            "G": 0x27}},
               {"kind": "blocks", "art": BLOCKS,
                "colours": {"D": 0x07, "r": 0x16, "R": 0x26, "b": 0x11, "B": 0x21, "y": 0x28, "Y": 0x38}}],
 }
-FOYER, DINING_HALL, ATTIC = manor.FLOORS[0], manor.FLOORS[1], manor.FLOORS[3]
+def with_black_mortar(floor: dict) -> dict:
+    """A classic floor with its walls' tops in one colour and black mortar (the classic pack's own two
+    shades would be one colour here)."""
+    _motif, numbers = floor["top"]
+    return floor | {"top": (manor.MASONRY, {"n": numbers["n"], "m": 0x0F})}
+
+
+FOYER, DINING_HALL, ATTIC = (with_black_mortar(manor.FLOORS[number]) for number in (0, 1, 3))
 FLOORS = [FOYER, GALLERY, DINING_HALL, BEDROOMS, NURSERY, ATTIC]   # the first floor first
 SHARED = ("front_door", "title_mansion", "title_moon")   # the classic pack's, as they are
 

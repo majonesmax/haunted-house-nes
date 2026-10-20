@@ -109,12 +109,13 @@ Then the SNES: the same engine idea on the SNES's 65816 processor, with the rema
 - **Improve where the real NES allows**, rather than copying the remaster's imitation of it.
 - **The board: MMC3** (mapper 4). Its scanline counter splits the screen - a fixed status band, the
   scrolling view, a fixed band below - and its banks give each floor its own tiles.
-- **Colours: three per floor, plus black** (chosen 2026-10-20 from mocks in shots/). The view's art is the
-  remaster's floor picture cut down to three NES colours, so that the light can work by palettes alone.
-- **The light: palettes on 16x16 blocks.** Three palettes hold the same three colours lit, dim and unlit; the
-  blocks around the eyes are switched to lit at the core and dim in a ring. Unlit is black in games 2-9,
-  dim in game 1 (the walls are always seen); a lightning flash brightens the unlit palette. Only a few
-  attribute bytes change a frame.
+- **Colours: a palette for walls and one for floors** (docs/decisions.md has why, and what it replaced):
+  four NES colours and black per floor, each 16x16 block in whichever palette fits it
+  (`tools/floor_colours.py`); the art draws its fine detail in black.
+- **The light: palettes on 16x16 blocks, hard-edged.** The blocks around the eyes take their own lit
+  palette; the rest the dark one: black in games 2-9, only the walls (dim) in game 1, as the original; a
+  lightning flash shows the walls. Only a few attribute bytes change a frame. Choices like these are logged
+  in docs/decisions.md.
 - **Sprites for everything that moves**, all drawn every frame (no flicker unless more than 8 share a line).
 
 The cartridge: 64K of program (the floors' maps in banks 0 and 3) and 64K of tiles, for both builds. The

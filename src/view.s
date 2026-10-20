@@ -14,9 +14,11 @@ VIEW_ROWS = 21            ; tile rows the view can touch (160 px, not aligned)
 ROW_MARGIN = 4            ; rows kept loaded beyond the view, above and below
 ROWS_PER_FRAME = 6        ; while a whole floor is drawn
 FLOOR_TOP_PX = 176        ; the view's top in floor pixels: (176 - (player y - eyes line)) * 2
-UNLIT = 1                 ; the view's palettes
-DIM = 2
-LIT = 3
+UNLIT = 1                 ; the view's palettes (docs/decisions.md): the dark...
+WALLS = 2                 ; ...and lit, the walls' and the floor's, each block the one its art was cut in
+FLOORS = 3
+DARK_COLOURS = 6          ; a floor's colours: the walls' palette, the floor's, the dark (game 1), lightning
+FLASH_COLOURS = 9
 ALL_UNLIT = $55           ; an attribute byte with all four blocks unlit
 STATUS_COLOURS_END = 4
 BAR_TILE_COUNT = 3
@@ -26,6 +28,8 @@ LIGHT_ROWS_AROUND = 3     ; blocks above and below the eyes' block that the ligh
 LIGHT_COLUMNS_AROUND = 2
 LIGHT_RANGE = 64          ; px: no light at all this far away
 LIGHT_KEY_BYTES = 7
+ATTRIBUTE_ROWS = 8        ; the nametable's attribute bytes: 8 rows of 8
+ATTRIBUTE_COLUMNS = 8
 
 .segment "CODE"
 
@@ -152,9 +156,7 @@ stream_rows:
     dec loaded_first
     lda loaded_first
     jsr fill_row_buffer
-    lda #1
-    sta row_waiting
-    rts
+    jmp row_streamed
 @below:
     lda loaded_first      ; rows loaded below the view's top
     clc
@@ -170,9 +172,30 @@ stream_rows:
     adc #NAMETABLE_ROWS
     jsr fill_row_buffer
     inc loaded_first
+    jmp row_streamed
+@done:
+    rts
+
+; A row is ready to send (fill_row_buffer put its nametable row in row_address); with the cheat on, its
+; attribute row is worked out again, from the floor's blocks now there.
+row_streamed:
     lda #1
     sta row_waiting
-@done:
+    lda row_address       ; the nametable row: (row_address - $2001) / 32
+    sta work_0
+    lda row_address + 1
+    and #$03
+    sta work_1
+    ldx #5
+@divide:
+    lsr work_1
+    ror work_0
+    dex
+    bne @divide
+    lda work_0
+    lsr
+    lsr                   ; / 4: its attribute row
+    sta cheat_row_due
     rts
 
 ; In: A = a floor row. Fills row_buffer with its tiles and row_address with where it goes.
@@ -333,16 +356,35 @@ write_row_now:
 
 ; The view's attributes all unlit; the bands' all the status palette.
 write_all_attributes:
+    ldx #0
+    lda #ALL_UNLIT
+@unlit:
+    sta attributes, x
+    inx
+    cpx #64
+    bne @unlit
+    lda lights_on         ; the cheat: each block in its own palette
+    beq @send
+    jsr point_at_kinds
+    lda #0
+@cheat_row:
+    pha
+    jsr cheat_attribute_row
+    pla
+    clc
+    adc #1
+    cmp #ATTRIBUTE_ROWS
+    bne @cheat_row
+@send:
     bit PPU_STATUS
     lda #$23
     sta PPU_ADDRESS
     lda #$C0
     sta PPU_ADDRESS
     ldx #0
-    lda #ALL_UNLIT
 @view:
+    lda attributes, x
     sta PPU_DATA
-    sta attributes, x
     sta attributes_sent, x
     inx
     cpx #64
@@ -411,42 +453,32 @@ compose_palettes:
     inx
     cpx #16               ; the status palette, and three placeholders the view overwrites
     bne @status
-    ldy #0                ; unlit: game 1 sees the walls (dim), games 2-9 black; lightning brightens it
-    lda #0
-    sta lightning_flash
-    lda lights_on
-    beq @no_cheat
-    jsr copy_colours_to_unlit   ; the cheat: every block lit (Y = 0: the lit colours)
-    ldy #0
-    ldx #(DIM * 4 + 1)
+    ldy #0                ; lit: the walls' palette and the floor's
+    ldx #(WALLS * 4 + 1)
     jsr copy_three_colours
-    jmp @lit
-@no_cheat:
+    ldy #3
+    ldx #(FLOORS * 4 + 1)
+    jsr copy_three_colours
+    lda #0                ; unlit: in game 1 the walls, dim (the floor black); in games 2-9 black; a
+    sta lightning_flash   ; lightning flash shows the walls
     jsr lightning_now
     bcc @no_lightning
     inc lightning_flash   ; (the thunder follows it: audio.s)
-    ldy #6
+    ldy #FLASH_COLOURS
     jmp @unlit
 @no_lightning:
     lda game_number
     bne @black
-    ldy #3
+    ldy #DARK_COLOURS
 @unlit:
     jsr copy_colours_to_unlit
-    jmp @dim
+    jmp @lit
 @black:
     lda #BLACK_COLOUR
     sta palette_buffer + UNLIT * 4 + 1
     sta palette_buffer + UNLIT * 4 + 2
     sta palette_buffer + UNLIT * 4 + 3
-@dim:
-    ldy #3
-    ldx #(DIM * 4 + 1)
-    jsr copy_three_colours
 @lit:
-    ldy #0
-    ldx #(LIT * 4 + 1)
-    jsr copy_three_colours
     ldx #0
 @sprites:
     lda sprite_colours, x
@@ -458,7 +490,8 @@ compose_palettes:
 
 copy_colours_to_unlit:
     ldx #(UNLIT * 4 + 1)
-; In: Y = which three of the floor's colours (0 lit, 3 dim, 6 lightning), X = where in the buffer.
+; In: Y = which three of the floor's colours (0 the walls', 3 the floor's, 6 the dark, 9 lightning), X = where
+; in the buffer.
 copy_three_colours:
     lda (colours_pointer), y
     sta palette_buffer, x
@@ -502,6 +535,10 @@ lightning_now:
 ; row's down, is worked out once; then a block is a table look-up and a masked store. Only the attribute
 ; bytes in lit_list (this frame's) and was_lit (last frame's) can have changed.
 light_blocks:
+    lda lights_on
+    beq @light
+    jmp cheat_blocks      ; the cheat: every block in its own palette (not the match's light)
+@light:
     jsr light_key_changed
     bcs @work_it_out
     lda #0                ; the same light as last frame: nothing to do, nothing to send
@@ -530,6 +567,13 @@ light_blocks:
     bne @lit
     rts
 @lit:
+    lda shown_floor       ; the floor's blocks: which take the floor's palette
+    asl
+    tax
+    lda floor_kinds, x
+    sta kinds_pointer
+    lda floor_kinds + 1, x
+    sta kinds_pointer + 1
     jsr measure_columns
     jsr start_rows
 @each_row:
@@ -770,6 +814,14 @@ light_row:
     sta light_row_start
     jsr within_room_limits
     bcc @none
+    lda block_row         ; which of the row's blocks take the floor's palette
+    asl
+    tay
+    lda (kinds_pointer), y
+    sta row_kinds
+    iny
+    lda (kinds_pointer), y
+    sta row_kinds + 1
     lda light_nametable_row
     and #$FE              ; the attribute bytes' row: (row / 2) * 8
     asl
@@ -787,6 +839,7 @@ light_row:
     tay
     lda light_levels, y
     beq @next
+    jsr block_kind
     sta block_palette
     jsr set_block_palette
 @next:
@@ -794,6 +847,149 @@ light_row:
     cpx column_count
     bne @column
 @none:
+    rts
+
+; --- the lights-on cheat -------------------------------------------------------------------------------
+; Every block in the palette its art was cut in (the floor's blocks map), so the whole floor is seen. Written
+; with the floor (write_all_attributes), then an attribute row again whenever a new row lands in it.
+cheat_blocks:
+    lda #0
+    sta was_lit_count
+    sta lit_count
+    sta lit_count_same
+    lda cheat_row_due
+    bmi @done
+    jsr point_at_kinds
+    lda cheat_row_due
+    jsr cheat_attribute_row
+    lda #$FF
+    sta cheat_row_due
+    lda #1
+    sta lit_count_same    ; (compare_attributes: something to send)
+@done:
+    rts
+
+point_at_kinds:
+    lda shown_floor
+    asl
+    tax
+    lda floor_kinds, x
+    sta kinds_pointer
+    lda floor_kinds + 1, x
+    sta kinds_pointer + 1
+    rts
+
+; In: A = a nametable attribute row (0-7). Its 8 bytes in attributes, from the floor's blocks in its two
+; nametable block rows, each noted in lit_list to be sent.
+cheat_attribute_row:
+    sta cheat_row
+    asl
+    jsr kinds_at_block_row
+    lda row_kinds
+    sta cheat_top
+    lda row_kinds + 1
+    sta cheat_top + 1
+    lda cheat_row
+    asl
+    clc
+    adc #1
+    jsr kinds_at_block_row   ; (block row 15 is past the nametable: it reads row 0's, unseen)
+    lda cheat_row
+    asl
+    asl
+    asl
+    tax                   ; the row's first byte
+    ldy #ATTRIBUTE_COLUMNS
+@byte:
+    sty cheat_left
+    lda cheat_top         ; the top two blocks' palettes...
+    and #3
+    tay
+    lda pair_palettes, y
+    sta work_0
+    lda row_kinds         ; ...and the bottom two's
+    and #3
+    tay
+    lda pair_palettes, y
+    asl
+    asl
+    asl
+    asl
+    ora work_0
+    sta attributes, x
+    ldy lit_count
+    txa
+    sta lit_list, y
+    inc lit_count
+    ldy #2                ; on two columns
+@shift:
+    lsr cheat_top + 1
+    ror cheat_top
+    lsr row_kinds + 1
+    ror row_kinds
+    dey
+    bne @shift
+    inx
+    ldy cheat_left
+    dey
+    bne @byte
+    rts
+
+; In: A = a nametable block row (0-14). Out: row_kinds: the floor's block row that's there now. The loaded
+; rows are floor rows loaded_first to loaded_first + 29, each at its nametable row mod 30.
+kinds_at_block_row:
+    asl                   ; its first nametable tile row
+    sta work_0
+    lda loaded_first      ; less loaded_first's nametable row, mod 30: how far past loaded_first
+    jsr nametable_tile_row
+    sta work_1
+    lda work_0
+    sec
+    sbc work_1
+    bcs @past
+    adc #NAMETABLE_ROWS
+@past:
+    clc
+    adc loaded_first      ; the floor tile row, then its block row
+    lsr
+    asl                   ; * 2 bytes a row of kinds
+    tay
+    lda (kinds_pointer), y
+    sta row_kinds
+    iny
+    lda (kinds_pointer), y
+    sta row_kinds + 1
+    rts
+
+; In: A = a floor tile row. Out: A = its nametable row (mod 30).
+nametable_tile_row:
+@modulo:
+    cmp #NAMETABLE_ROWS
+    bcc @found
+    sbc #NAMETABLE_ROWS
+    jmp @modulo
+@found:
+    rts
+
+; In: X = the column (in the row's columns). Out: A = its lit palette, as set_block_palette takes it: 1 the
+; walls', 2 the floor's (row_kinds: a bit per block column). Keeps X.
+block_kind:
+    txa
+    clc
+    adc block_column
+    cmp #8                ; the carry: the right half's byte...
+    and #7                ; (and and lda leave the carry be)
+    tay
+    lda row_kinds
+    bcc @half_found
+    lda row_kinds + 1
+@half_found:
+    and bits, y
+    beq @walls
+    lda #(FLOORS - UNLIT)
+    rts
+@walls:
+    lda #(WALLS - UNLIT)
     rts
 
 ; In: A = a floor block row. Out: A = its row in the nametable's blocks (mod 15).
@@ -826,7 +1022,8 @@ within_room_limits:
     clc
     rts
 
-; In: X = the column (in the row's columns), block_palette = the light (1 dim, 2 lit). Its two bits in its
+; In: X = the column (in the row's columns), block_palette = its lit palette (1 the walls', 2 the floor's: the
+; palette less UNLIT). Its two bits in its
 ; attribute byte, noting the byte the first time it's lit this frame. Keeps X.
 set_block_palette:
     lda column_byte, x
@@ -1293,6 +1490,8 @@ status_colours:   .byte BLACK_COLOUR, $30, $10, $27,  BLACK_COLOUR, 0, 0, 0
 sprite_colours:   .byte BLACK_COLOUR, $30, $10, $27,  BLACK_COLOUR, $30, $10, $00
                   .byte BLACK_COLOUR, $24, $14, $30,  BLACK_COLOUR, $16, $27, $12
 keep_other_blocks: .byte %11111100, %11110011, %11001111, %00111111
+pair_palettes:    ; two blocks side by side, by their kinds (bit 0 the left): their palettes, as two quadrants
+    .byte WALLS | WALLS << 2, FLOORS | WALLS << 2, WALLS | FLOORS << 2, FLOORS | FLOORS << 2
 palette_bits:     ; a palette 0-3 in each of the four blocks of an attribute byte
     .byte $00, $01, $02, $03,  $00, $04, $08, $0C,  $00, $10, $20, $30,  $00, $40, $80, $C0
 status_places:    ; where each changing tile goes (compose_status's order)
