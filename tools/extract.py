@@ -62,7 +62,7 @@ CONSTANTS = [
     ("FRONT_DOOR_FLOOR", P.FRONT_DOOR_FLOOR), ("START_X", P.START_X), ("START_Y", P.START_Y),
     ("GAME_3_KEY_FLOOR", P.GAME_3_KEY[0]), ("GAME_3_KEY_X", P.GAME_3_KEY[1]),
     ("GAME_3_KEY_Y", P.GAME_3_KEY[2]),
-    ("GHOST_START_FLOOR", 3), ("MIDDLE_ROW", P.MIDDLE_ROW), ("DROP_TOO_HIGH", P.DROP_TOO_HIGH),
+    ("MIDDLE_ROW", P.MIDDLE_ROW), ("DROP_TOO_HIGH", P.DROP_TOO_HIGH),
     ("DROP_TOO_FAR_RIGHT", P.DROP_TOO_FAR_RIGHT),
     ("MASK_WITH_LEFT_DOOR", P.MASK_WITH_LEFT_DOOR[0]), ("MASK_2_WITH_LEFT_DOOR", P.MASK_WITH_LEFT_DOOR[1]),
     ("MASK_WITHOUT", P.MASK_WITHOUT[0]), ("MASK_2_WITHOUT", P.MASK_WITHOUT[1]),
@@ -92,22 +92,35 @@ def random_bits(rom: bytes) -> bytes:
     return bytes(packed)
 
 
-def include_file(rom: bytes) -> str:
-    lines = [HEADER, "", "; the mansion's sizes and places"]
-    lines += [f"{name} = ${value:02X}" for name, value in CONSTANTS + [("FLOOR_COUNT", FLOOR_COUNT)]]
+def include_text(header: str, constants: list[tuple[str, int]], tables: dict[str, tuple[bytes, str]],
+                 eyes: list[tuple[str, int]], bits: bytes) -> str:
+    """The include file: the constants, each table (by TABLES' labels: its bytes and what it is, the
+    per-floor ones a part per floor), the eyes' bytes and the random bits. tools/shareable.py writes its
+    mansion through this too."""
+    lines = [header, "", "; the mansion's sizes and places"]
+    lines += [f"{name} = ${value:02X}" for name, value in constants]
     lines += [f"{label.upper()}_SIZE = {length}" for label, _address, length, _what in TABLES
               if label in PER_FLOOR] + [""]
+    for label, _address, _length, _what in TABLES:
+        data, what = tables[label]
+        lines += [f"{label}:" + (f"   ; {what}" if what else "")] + byte_lines(data)
+    lines += ["", "; the eyes' rows, as the 2600 builds them"]
+    lines += [f"{label} = ${value:02X}" for label, value in eyes]
+    lines += ["", "random_bits:   ; the mood sound's random bits, eight to a byte"] + byte_lines(bits)
+    return "\n".join(lines) + "\n"
+
+
+def include_file(rom: bytes) -> str:
+    tables = {}
     for label, address, length, what in TABLES:
         start = address - R.ROM_START
         data = rom[start:start + length]
         if label in PER_FLOOR:
             data, what = data * FLOOR_COUNT, f"{what} (the same plan on each floor)".lstrip(" ")
-        lines += [f"{label}:" + (f"   ; {what}" if what else "")] + byte_lines(data)
-    lines += ["", "; the eyes, as the 2600 builds them"]
-    lines += [f"{label} = ${R.byte_at(rom, address):02X}" for label, address in EYES]
-    lines += ["", "random_bits:   ; bit 0 of the bytes at $F000-$F0FF, eight to a byte"]
-    lines += byte_lines(random_bits(rom))
-    return "\n".join(lines) + "\n"
+        tables[label] = (data, what)
+    eyes = [(label, R.byte_at(rom, address)) for label, address in EYES]
+    constants = CONSTANTS + [("GHOST_START_FLOOR", FLOOR_COUNT - 1), ("FLOOR_COUNT", FLOOR_COUNT)]
+    return include_text(HEADER, constants, tables, eyes, random_bits(rom))
 
 
 def main() -> None:
