@@ -4,4 +4,4 @@ ruff==0.17.1
 pyright==1.1.414
 sounddevice   # only so the remaster's check (tests/verify_engine.py) can be imported
 py65          # a 6502 in Python, for tools/profile.py
-pygame        # tools/play.py: a window and the keyboard
+pygame-ce>=2.5 # tools/play.py: a window and the keyboard (the remaster's pygame, ready-built for Python 3.14)
