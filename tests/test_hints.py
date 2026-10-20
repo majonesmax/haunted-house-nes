@@ -31,7 +31,6 @@ from game import palette  # noqa: E402
 from game import rom as R  # noqa: E402
 from game.state import Game, GameState  # noqa: E402
 
-FONT = os.path.join(ROOT, "build", "faithful", "art", "font.inc")
 HEADER, BANK = 16, 0x2000
 EXTRAS_BANK = 2
 STATE_START = 0x80
@@ -55,10 +54,10 @@ def labels(rom_path: str) -> dict[str, int]:
     return found
 
 
-def font_letters() -> dict[int, str]:
-    """Tile number -> letter, from the font's charmap."""
+def font_letters(rom_path: str) -> dict[int, str]:
+    """Tile number -> letter, from the font's charmap (in the build's art, beside its ROM)."""
     letters = {}
-    with open(FONT) as font_file:
+    with open(os.path.join(os.path.dirname(rom_path), "art", "font.inc")) as font_file:
         for match in re.finditer(r"\.charmap \$([0-9A-F]+), (\d+)", font_file.read()):
             letters[int(match.group(2))] = chr(int(match.group(1), 16))
     return letters
@@ -73,7 +72,7 @@ class HintReader:
         with open(rom_path, "rb") as rom_file:
             start = HEADER + EXTRAS_BANK * BANK
             self.extras = rom_file.read()[start:start + BANK]
-        self.letters = font_letters()
+        self.letters = font_letters(rom_path)
 
     def byte(self, name: str, offset: int = 0) -> int:
         return int(self.nes.ram[self.at[name] + offset])
