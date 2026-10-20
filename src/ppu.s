@@ -22,7 +22,7 @@ CONTROL_DRAWING = $80     ; NMI on, VRAM address +1 a write (while a whole floor
 RENDER_ON    = $1E        ; background and sprites, both in the leftmost 8 pixels too
 VIEW_TOP_LINE = 40
 VIEW_HEIGHT  = 160
-BELOW_TOP_LINE = 200
+BELOW_TOP_LINE = 197      ; (three lines above row 25, so the hints' top line clears the view)
 SPRITE_TILES_BANK = 16    ; the sprites' 4K: 1K banks 16-19
 MAPS_BANK = 0             ; program banks (src/mmc3.cfg)
 MUSIC_BANK = 1
@@ -99,6 +99,7 @@ nmi:
     jsr send_row
     jsr send_attributes
     jsr send_status
+    jsr send_word_rows    ; (the hints' rows, one a frame, never with a floor row: see hints.s)
     jmp @sent
 @full_screen_sends:
     jsr send_word_rows
@@ -238,18 +239,19 @@ send_attributes:
 @done:
     rts
 
-; A full screen's word rows (screens.s): each row's 32 tiles.
+; Word rows (screens.s, hints.s): each row's 32 tiles, in the nametable at queue_pages ($20 or $24).
+; (The NMI keeps to its own bytes: the main loop's work_ bytes may be in use when it comes.)
 send_word_rows:
     ldx #0
     ldy #0
 @row:
     cpx queue_count
     beq @done
-    lda queue_rows, x     ; $2000 + row * 32
+    lda queue_rows, x     ; the page + row * 32
     lsr
     lsr
     lsr
-    ora #$20
+    ora queue_pages, x
     sta PPU_ADDRESS
     lda queue_rows, x
     asl
@@ -259,12 +261,12 @@ send_word_rows:
     asl
     sta PPU_ADDRESS
     lda #32
-    sta work_11
+    sta nmi_count
 @tile:
     lda queue_tiles, y
     sta PPU_DATA
     iny
-    dec work_11
+    dec nmi_count
     bne @tile
     inx
     jmp @row

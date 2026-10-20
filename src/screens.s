@@ -85,7 +85,7 @@ choose_screen:
     rts
 
 ; The NES's buttons besides the 2600's: any button ends the story (and does nothing else); B opens and
-; closes the help on the title.
+; closes the help on the title; in play, B asks for a hint and B with Select is the cheat (cheat.s).
 screen_buttons:
     lda pad
     eor pad_before
@@ -106,6 +106,7 @@ screen_buttons:
     sta select_down
     rts
 @story_over:
+    jsr play_buttons
     lda pad_pressed
     and #PAD_B
     beq @done
@@ -249,9 +250,11 @@ continue_full_screen:
     rts
 
 ; In: A = a nametable row. Out: word_row and word_tiles: the screen's picture on that row (blank for the
-; help and the story).
+; help and the story); word_page the first nametable.
 base_row:
     sta word_row
+    ldx #$20
+    stx word_page
     lda screen_shown
     cmp #SCREEN_HELP
     bcs @blank
@@ -615,6 +618,8 @@ queue_word_row:
     ldx queue_count
     lda word_row
     sta queue_rows, x
+    lda word_page
+    sta queue_pages, x
     inc queue_count
     rts
 

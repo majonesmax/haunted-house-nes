@@ -402,6 +402,14 @@ compose_palettes:
     ldy #0                ; unlit: game 1 sees the walls (dim), games 2-9 black; lightning brightens it
     lda #0
     sta lightning_flash
+    lda lights_on
+    beq @no_cheat
+    jsr copy_colours_to_unlit   ; the cheat: every block lit (Y = 0: the lit colours)
+    ldy #0
+    ldx #(DIM * 4 + 1)
+    jsr copy_three_colours
+    jmp @lit
+@no_cheat:
     jsr lightning_now
     bcc @no_lightning
     inc lightning_flash   ; (the thunder follows it: audio.s)
@@ -423,6 +431,7 @@ compose_palettes:
     ldy #3
     ldx #(DIM * 4 + 1)
     jsr copy_three_colours
+@lit:
     ldy #0
     ldx #(LIT * 4 + 1)
     jsr copy_three_colours

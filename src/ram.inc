@@ -181,6 +181,9 @@ word_row:       .res 1    ; a word row: where, and its 32 tiles
 word_tiles:     .res 32
 queue_count:    .res 1    ; word rows for the NMI to send: up to 2
 queue_rows:     .res 2
+queue_pages:    .res 2    ; ...each one's nametable: $20 or $24
+word_page:      .res 1
+nmi_count:      .res 1    ; the NMI's own counter
 queue_tiles:    .res 64
 text_column:    .res 1
 big_half:       .res 1
@@ -196,6 +199,39 @@ won_frames:     .res 1    ; the win at the door: frames so far
 draw_priority:  .res 1    ; $20: a sprite behind the background
 sprites_from:   .res 1    ; the lines sprites may be drawn on
 sprites_to:     .res 1
+
+; hints.s
+.segment "BSS"
+hint_parts:     .res 24   ; the hint: each line's parts, four string addresses (a 0 high byte: no more)
+spec_slot:      .res 1    ; making it: the next part's place
+hint_slot:      .res 1    ; making a row: the part being put
+hint_width:     .res 1
+hint_rows_left: .res 1    ; rows still to send
+hint_timer:     .res 1    ; frames of 2 left on screen
+hint_restore_due: .res 1
+hint_in_extras: .res 1    ; not 0: the parts are in the extras bank
+hint_asked:     .res 1    ; not 0: B was let go this frame (cheat.s)
+
+; cheat.s
+lights_on:      .res 1    ; not 0: the cheat - everything on the floor shows
+b_held:         .res 1
+cheat_used:     .res 1    ; not 0: Select was pressed while B was held
+lights_note_due: .res 1  ; not 0: the band's own words go back when they can
+hint_was_carried: .res 1  ; what was held last frame...
+hint_was_thing: .res 1    ; ...what it's called...
+hint_was_whole: .res 1    ; ...and whether it was the whole urn
+hint_number:    .res 1
+hint_sideways:  .res 1
+hint_other:     .res 1
+hint_x:         .res 1
+hint_y:         .res 1
+aim_item:       .res 1    ; the nearest piece of the urn...
+aim_floor:      .res 1    ; ...its floor and room
+aim_room:       .res 1
+aim_floors:     .res 1    ; ...and how far: floors, then across and up
+aim_distance:   .res 2
+try_floors:     .res 1    ; the one being measured
+try_distance:   .res 2
 
 ; moved out of the zero page, which is full (the game's state takes its top half)
 .segment "BSS"

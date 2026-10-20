@@ -495,8 +495,10 @@ monster_seen:
     sta thing_y
     lda #HEIGHT_MONSTER
     sta thing_height
-    lda game_number       ; game 1, or dying: any on the floor that's on screen
+    lda game_number       ; game 1, dying or the cheat: any on the floor that's on screen
     beq @on_screen
+    lda lights_on
+    bne @on_screen
     lda death_timer
     bne @on_screen
     lda monsters_here
@@ -697,6 +699,7 @@ draw_items:
 item_seen:
     lda flags
     and #MATCH_LIT
+    ora lights_on
     beq @no
     lda item_floor, x
     cmp floor
@@ -714,6 +717,14 @@ item_seen:
     cmp #FIRST_LOCKED_GAME
     bcc @no
 @near:
+    lda lights_on
+    beq @in_reach
+    lda item_y, x         ; the cheat: anywhere on screen
+    sta thing_y
+    lda #HEIGHT_ITEM
+    sta thing_height
+    jmp thing_on_screen
+@in_reach:
     jsr light_distance
     cmp #ITEM_REACH
     bcs @no
@@ -759,10 +770,11 @@ draw_item:
     lda #KIND_URN
     jmp draw_thing
 
-; This room's stairs, while a match is lit.
+; This room's stairs, while a match is lit (or the cheat's on).
 draw_stairs:
     lda flags
     and #MATCH_LIT
+    ora lights_on
     beq @none
     lda stairs
     and #NO_STAIRS

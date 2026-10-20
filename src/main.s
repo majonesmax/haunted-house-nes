@@ -80,6 +80,7 @@ main_loop:
     sta PPU_MASK
 .endif
     jsr prepare_picture
+    jsr hints_frame
     lda #5
     sta work_part
     jsr audio_frame
@@ -172,6 +173,8 @@ read_controller:
 .include "sprites.s"
 .include "audio.s"
 .include "screens.s"
+.include "hints.s"
+.include "cheat.s"
 .include "ppu.s"
 
 .segment "RODATA"

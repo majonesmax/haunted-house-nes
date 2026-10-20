@@ -21,6 +21,7 @@ predict the original game exactly. Python here is for tools and checks only.
 .venv/bin/python tests/verify_engine.py  # the engine against the remaster's model, frame by frame (run it after
                                          # any change to src/; it also fails if a frame runs late -
                                          # the NES counts them, and its spare time, in late_frames/last_spare)
+.venv/bin/python tests/test_hints.py     # B's hints and the two notes say what the remaster's say, in random scenes
 .venv/bin/python tools/readability.py    # the Python readability rules (a hook runs it after each edit)
 ```
 

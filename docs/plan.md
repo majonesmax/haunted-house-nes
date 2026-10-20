@@ -69,8 +69,13 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    follows the moment (a floor's tune carrying on after a monster's visit), the effects follow what just
    happened (the remaster's events). `tools/record_sound.py` saves what's heard as a WAV. Possible later:
    the 2600's own sound as a choice, and the house's ambience (rain, the attic's quiet).
-6. **The remaster's extras**: the title screen and story, G's hints, the lights-on cheat, the storm, the
-   ending.
+6. **The remaster's extras** - done: the story at power-on; the title with its mansion, moon, lightning and
+   the eyes in the tower window, the game and the help (B); game over; the ending at dawn with the eyes
+   walking off and the verdict (`src/screens.s`, pictures from `tools/screens.py`). In play, B gives the
+   remaster's hint and two notes come by themselves - the urn whole, and one thing held at a time - in the
+   band under the view (`src/hints.s`; `tests/test_hints.py` checks their words against the remaster's
+   game/hints.py). B with Select is the lights-on cheat (`src/cheat.s`): while B is held, Select is never the
+   game's. Lightning is in the picture and the sound. Possible later: "YOU ESCAPED!" at the door.
 7. **The new mansion**: designed for the NES, bigger than the original, with a check that its waypoints keep
    monsters out of the walls and every door and stairway works.
 8. **Release**: the shareable ROM, built and checked by GitHub; the faithful build stays a recipe.
