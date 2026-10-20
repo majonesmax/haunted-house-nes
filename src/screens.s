@@ -22,6 +22,8 @@ GAME_ROW_ON_TITLE = 6
 FULL_ROWS_PER_FRAME = 6
 WORD_ROWS_PER_FRAME = 1
 STRING_END = $FF
+STORY_ENDING = 1          ; story_done: a button has ended the story, and is still held...
+STORY_OVER = 2            ; ...and let go
 LIST_END = $FE
 GAME_OVER_WORDS = 170     ; frames before game over's words appear (the remaster's)
 ENDING_WORDS = 60
@@ -88,7 +90,8 @@ choose_screen:
     sta screen_wanted
     rts
 
-; The NES's buttons besides the 2600's: any button ends the story (and does nothing else); B opens and
+; The NES's buttons besides the 2600's: any button ends the story (and does nothing else, even held: the
+; title comes next); B opens and
 ; closes the help on the title; in play, B asks for a hint and B with Select is the cheat (cheat.s).
 screen_buttons:
     lda pad
@@ -98,10 +101,20 @@ screen_buttons:
     lda pad
     sta pad_before
     lda story_done
-    bne @story_over
+    cmp #STORY_OVER
+    beq @story_over
+    cmp #STORY_ENDING
+    beq @letting_go
     lda pad_pressed
     beq @swallow
-    inc story_done
+    lda #STORY_ENDING
+    sta story_done
+    jmp @swallow
+@letting_go:              ; the button that ended the story, still held: Start must not start a game, but
+    lda pad               ; show the title, so it waits until every button is let go
+    bne @swallow
+    lda #STORY_OVER
+    sta story_done
 @swallow:                 ; while the story shows, the game hears nothing
     lda #0
     sta stick

@@ -172,7 +172,7 @@ cheat_left:     .res 1
 .segment "BSS"
 screen_wanted:  .res 1    ; the screen this moment wants...
 screen_shown:   .res 1    ; ...and the one in the first nametable
-story_done:     .res 1    ; not 0 once a button has ended the story
+story_done:     .res 1    ; not 0 once a button has ended the story (STORY_ENDING, then STORY_OVER)
 help_open:      .res 1
 pad_before:     .res 1    ; the buttons last frame, and those pressed since
 pad_pressed:    .res 1
