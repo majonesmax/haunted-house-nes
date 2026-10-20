@@ -228,6 +228,7 @@ lights_note_due: .res 1  ; not 0: the band's own words go back when they can
 hint_was_carried: .res 1  ; what was held last frame...
 hint_was_thing: .res 1    ; ...what it's called...
 hint_was_whole: .res 1    ; ...and whether it was the whole urn
+hint_was_won:   .res 1    ; not 0: the win at the door has been said
 hint_number:    .res 1
 hint_sideways:  .res 1
 hint_other:     .res 1

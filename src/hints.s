@@ -448,8 +448,12 @@ way_across:
     rts
 
 ; --- the notes -----------------------------------------------------------------------------------------
-; The urn just became whole in your hands; or taking something put down what you held.
+; The urn just became whole in your hands; or taking something put down what you held; or you've won.
 notes:
+    jsr won_note
+    bcc @not_won_now
+    rts
+@not_won_now:
     jsr holding_whole_urn
     bcc @not_whole
     lda hint_was_whole
@@ -484,6 +488,27 @@ notes:
     part one_at_a_time
     jsr show_spec
 @done:
+    rts
+
+; Out: carry set if the game has just been won, at the door: the band says so while the light comes up.
+won_note:
+    lda game_state
+    cmp #GAME_WON
+    beq @won
+    lda #0
+    sta hint_was_won
+    clc
+    rts
+@won:
+    lda hint_was_won
+    bne @said
+    inc hint_was_won
+    jsr start_spec
+    jsr next_line         ; one line, in the middle
+    part escaped_words
+    jsr show_spec
+@said:
+    sec
     rts
 
 ; What's held, for next frame's notes.
@@ -694,6 +719,7 @@ to_the_left:      .byte "TO THE LEFT", STRING_END
 to_the_right:     .byte "TO THE RIGHT", STRING_END
 full_stop:        .byte ".", STRING_END
 urn_whole:        .byte "THE URN IS WHOLE!", STRING_END
+escaped_words:    .byte "YOU ESCAPED WITH THE URN!", STRING_END
 get_it_out:       .byte "NOW GET IT OUT OF THE", STRING_END
 front_door_where: .byte "FRONT DOOR - FLOOR 1, RIGHT.", STRING_END
 you_put_down:     .byte "YOU PUT DOWN ", STRING_END

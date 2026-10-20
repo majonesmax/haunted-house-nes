@@ -260,14 +260,15 @@ send_word_rows:
     asl
     asl
     sta PPU_ADDRESS
-    lda #32
-    sta nmi_count
+    stx nmi_count         ; (the row: X counts its tiles, the quickest way, 15 cycles a tile)
+    ldx #32
 @tile:
     lda queue_tiles, y
     sta PPU_DATA
     iny
-    dec nmi_count
+    dex
     bne @tile
+    ldx nmi_count
     inx
     jmp @row
 @done:

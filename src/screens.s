@@ -17,6 +17,7 @@ TITLE_TILES_BANK = SPRITE_TILES_BANK + 4   ; 1K banks: the title's tile set, the
 ENDING_TILES_BANK = TITLE_TILES_BANK + 4
 WORD_SLOTS = 11
 FULL_ROWS_PER_FRAME = 6
+WORD_ROWS_PER_FRAME = 1
 STRING_END = $FF
 LIST_END = $FE
 GAME_OVER_WORDS = 170     ; frames before game over's words appear (the remaster's)
@@ -249,7 +250,11 @@ continue_full_screen:
     lda #0
     sta drawing
     sta screen_off
-    jmp full_screen_palettes
+    jsr full_screen_palettes   ; its colours and sprites go with the screen coming on, not a frame after
+    jsr full_screen_sprites    ; (or it shows a frame in the last screen's colours)
+    lda #1
+    sta render_ready
+    rts
 @not_yet:
     rts
 
@@ -563,7 +568,8 @@ story_lines_due:
     txa
     rts
 
-; Up to two marked word rows a frame, into the queue the NMI sends.
+; A marked word row a frame, into the queue the NMI sends. (Two, with the sprites and colours, ran past the
+; vertical blank's end: the picture jumped for a frame as the ending's words came.)
 send_dirty_slots:
     lda #0
     sta queue_count
@@ -593,7 +599,7 @@ send_dirty_slots:
     pla
     tax
     lda queue_count
-    cmp #2
+    cmp #WORD_ROWS_PER_FRAME
     beq @done
 @next:
     inx
