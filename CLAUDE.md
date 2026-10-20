@@ -16,6 +16,7 @@ predict the original game exactly. Python here is for tools and checks only.
 .venv/bin/python tools/build.py          # build/faithful/haunted_house_faithful.nes (ca65 + ld65, src/mmc3.cfg)
 .venv/bin/python tools/build.py --shareable   # build/shareable/haunted_house.nes: our mansion, nothing from the ROM
                                          # (the other tools and tests take --shareable too)
+.venv/bin/python tools/get_core.py       # the FCEUmm core into cores/ (libretro's nightly)
 .venv/bin/python tools/check_mansion.py  # mansion/floors.txt plays as the original does (after any change to it)
 .venv/bin/python tools/draw_mansion.py   # its plans as a picture: shots/mansion.png
 .venv/bin/python tests/test_mansion.py   # the text format gets the original's tables back exactly

@@ -1,7 +1,7 @@
 """An NES emulator to test the game in: the FCEUmm libretro core, loaded as a library and run a frame at a
 time, with no window. The checks use it to play the built ROM and read its RAM between frames.
 
-    nes = Nes("build/haunted_house.nes")
+    nes = Nes("build/shareable/haunted_house.nes")
     nes.run(60, held={BUTTON_A})     # a second with A held
     nes.ram[0x00]                    # the 2K of RAM, live
     nes.picture                      # the last frame, RGB
@@ -12,13 +12,15 @@ Stella (game/emulator.py there), cut down to what tests need: no sound out, no w
 
 import ctypes as C
 import os
+import sys
 from typing import Any, Callable
 
 import numpy as np
 from numpy.typing import NDArray
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CORE = os.path.join(ROOT, "cores", "fceumm_libretro.dylib")
+LIBRARY_ENDINGS = {"darwin": ".dylib", "win32": ".dll"}   # (and .so everywhere else)
+CORE = os.path.join(ROOT, "cores", "fceumm_libretro" + LIBRARY_ENDINGS.get(sys.platform, ".so"))
 WORK_DIR = os.fsencode(os.path.join(ROOT, "build", "core"))
 
 # libretro constants (libretro.h)

@@ -27,6 +27,7 @@ import shareable  # noqa: E402
 from nes import BUTTON_A, BUTTON_B, BUTTON_START, Nes  # noqa: E402
 
 from game import hints  # noqa: E402
+from game import palette  # noqa: E402
 from game import rom as R  # noqa: E402
 from game.state import Game, GameState  # noqa: E402
 
@@ -196,6 +197,14 @@ def check_notes(nes: Nes, reader: HintReader, game: Game, scenes: int, chance: r
     return differences
 
 
+def mansion_game() -> Game:
+    """The remaster's Game, reading our mansion: no 2600 ROM needed (Game() would load one)."""
+    game = Game.__new__(Game)
+    game.rom = shareable.floors_rom()
+    game.palette = palette.load()
+    return game
+
+
 def main() -> None:
     our_mansion = shareable_wanted(sys.argv)
     scenes = int(sys.argv[1]) if len(sys.argv) > 1 else 300
@@ -210,9 +219,7 @@ def main() -> None:
     nes.run(30)
     nes.run(1, {BUTTON_A})
     reader = HintReader(nes, rom_path)
-    game = Game()
-    if our_mansion:
-        game.rom = shareable.floors_rom()
+    game = mansion_game() if our_mansion else Game()
     differences = check_hints(nes, reader, game, scenes, chance)
     differences += check_notes(nes, reader, game, scenes, chance)
     sys.exit(1 if differences else 0)

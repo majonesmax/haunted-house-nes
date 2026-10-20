@@ -25,6 +25,8 @@ from music import chiptune  # noqa: E402
 
 OUTPUT = os.path.join(ROOT, "build", "sound", "sound.inc")
 PACK_MUSIC = os.path.join(REMASTER, "packs", "classic", "music.json")
+MANSION_MUSIC = os.path.join(ROOT, "mansion", "music.json")   # the shareable build's own songs
+MUSIC_BANKS = (1, 4)        # program banks at $A000: the classic songs and the effects; the mansion's songs
 FPS = 60.0988               # the NES's frames a second (NTSC)
 CPU_HZ = 1789773
 LOWEST_NOTE = 24            # note 1 is MIDI 25: notes are MIDI - 24
@@ -300,37 +302,64 @@ def word_lines(labels: list[str]) -> list[str]:
     return ["    .word " + ", ".join(labels[start:start + 4]) for start in range(0, len(labels), 4)]
 
 
-def include_lines() -> list[str]:
+def all_songs() -> tuple[dict[str, dict], set[str]]:
+    """The classic soundtrack's songs, then the mansion's own (mansion/music.json); and the names of ours."""
     with open(PACK_MUSIC) as music_file:
         songs = json.load(music_file)["songs"]
-    lines = ["; Made by tools/make_music.py from the remaster's classic soundtrack and effects.", ""]
+    with open(MANSION_MUSIC) as music_file:
+        ours = json.load(music_file)["songs"]
+    return songs | ours, set(ours)
+
+
+def shared_block(songs: dict[str, dict], ours: set[str], labelled: bool) -> list[str]:
+    """What both music banks start with, at the same places in each, so it reads the same whichever is in:
+    the instruments, the notes' periods, every song's streams, whether it loops and the bank it's in. Labelled
+    in the first bank only."""
+    def label(name: str, what: str = "") -> str:
+        return (f"{name}:" if labelled else ";") + (f"   ; {what}" if what else "")
+    duties = [instrument.duty << 6 for instrument in INSTRUMENTS.values()]
+    lines = [label("instrument_duty")] + byte_lines(duties)
+    lines += [label("instrument_volumes", "per instrument: its volumes, $FF after the last (held)")]
+    lines += word_lines([f"volumes_{name}" for name in INSTRUMENTS])
+    for name, instrument in INSTRUMENTS.items():
+        lines += [label(f"volumes_{name}")] + byte_lines(instrument.volumes + [END])
+    pulses, triangles = period_tables()
+    lines += [label("pulse_low")] + byte_lines([period & 0xFF for period in pulses])
+    lines += [label("pulse_high")] + byte_lines([period >> 8 for period in pulses])
+    lines += [label("triangle_low")] + byte_lines([period & 0xFF for period in triangles])
+    lines += [label("triangle_high")] + byte_lines([period >> 8 for period in triangles])
+    lines += [label("song_voices", "per song, its four streams")]
+    lines += word_lines([f"song_{name}_{voice}" for name in songs for voice in range(4)])
+    lines += [label("song_loops")] + byte_lines([1 if song["loop"] else 0 for song in songs.values()])
+    lines += [label("song_banks", "per song, the program bank its streams are in, at $A000")]
+    return lines + byte_lines([MUSIC_BANKS[1] if name in ours else MUSIC_BANKS[0] for name in songs])
+
+
+def song_lines(songs: dict[str, dict]) -> list[str]:
+    lines = []
+    for name, song in songs.items():
+        streams, _loop = song_streams(song)
+        for voice, stream in enumerate(streams):
+            lines += [f"song_{name}_{voice}:"] + byte_lines(stream)
+    return lines
+
+
+def include_lines() -> list[str]:
+    songs, ours = all_songs()
+    lines = ["; Made by tools/make_music.py from the remaster's classic soundtrack and effects, and the",
+             "; mansion's own songs. It opens both music banks: MUSIC (bank 1), then MUSIC_2 (bank 4).", ""]
     lines += [f"INSTRUMENT_{name.upper()} = {number}" for name, number in INSTRUMENT_NUMBER.items()]
     lines += [f"SONG_{name.upper()} = {number}" for number, name in enumerate(songs)]
     lines += [f"EFFECT_{name.upper()} = {number}" for number, name in enumerate(EFFECTS)]
-    lines += [f"SONG_COUNT = {len(songs)}", f"QUIET_EFFECT = EFFECT_{QUIET_EFFECTS[0].upper()}", ""]
-    lines += ["instrument_duty:"] + byte_lines([instrument.duty << 6 for instrument in INSTRUMENTS.values()])
-    lines += ["instrument_volumes:   ; per instrument: its volumes, $FF after the last (held)"]
-    lines += word_lines([f"volumes_{name}" for name in INSTRUMENTS])
-    for name, instrument in INSTRUMENTS.items():
-        lines += [f"volumes_{name}:"] + byte_lines(instrument.volumes + [END])
-    pulses, triangles = period_tables()
-    lines += ["pulse_low:"] + byte_lines([period & 0xFF for period in pulses])
-    lines += ["pulse_high:"] + byte_lines([period >> 8 for period in pulses])
-    lines += ["triangle_low:"] + byte_lines([period & 0xFF for period in triangles])
-    lines += ["triangle_high:"] + byte_lines([period >> 8 for period in triangles])
-    loops = []
-    for name, song in songs.items():
-        streams, loop = song_streams(song)
-        loops.append(1 if loop else 0)
-        for voice, stream in enumerate(streams):
-            lines += [f"song_{name}_{voice}:"] + byte_lines(stream)
-    lines += ["song_voices:   ; per song, its four streams"]
-    lines += word_lines([f"song_{name}_{voice}" for name in songs for voice in range(4)])
-    lines += ["song_loops:"] + byte_lines(loops)
+    lines += [f"SONG_COUNT = {len(songs)}", f"QUIET_EFFECT = EFFECT_{QUIET_EFFECTS[0].upper()}",
+              f"MUSIC_BANK = {MUSIC_BANKS[0]}", ""]
+    lines += ['.segment "MUSIC"'] + shared_block(songs, ours, True)
+    lines += song_lines({name: song for name, song in songs.items() if name not in ours})
     for name, parts in EFFECTS.items():
         lines += [f"effect_{name}:"] + byte_lines(effect_bytes(parts))
     lines += ["effects:"] + word_lines([f"effect_{name}" for name in EFFECTS])
-    return lines
+    lines += ['.segment "MUSIC_2"'] + shared_block(songs, ours, False)
+    return lines + song_lines({name: song for name, song in songs.items() if name in ours})
 
 
 def main() -> None:

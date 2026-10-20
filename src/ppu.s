@@ -25,9 +25,9 @@ VIEW_HEIGHT  = 160
 BELOW_TOP_LINE = 197      ; (three lines above row 25, so the hints' top line clears the view)
 SPRITE_TILES_BANK = FLOOR_COUNT * 4   ; the sprites' 4K, after the floors' (1K banks)
 MAPS_BANK = 0             ; program banks (src/mmc3.cfg)
-MUSIC_BANK = 1
 EXTRAS_BANK = 2
-PROGRAM_BANK_8000 = 6     ; the MMC3's register for the bank at $8000
+PROGRAM_BANK_8000 = 6     ; the MMC3's register for the bank at $8000...
+PROGRAM_BANK_A000 = 7     ; ...and at $A000 (MUSIC_BANK, from sound.inc, is the music's first bank)
 OAM          = $0200
 
 .segment "CODE"

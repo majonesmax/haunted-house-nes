@@ -1,12 +1,15 @@
 {
   "include": [
     "tools",
-    "tests"
+    "tests",
+    "mansion"
   ],
   "extraPaths": [
     "tools",
+    "mansion",
     "../haunted-house",
-    "../haunted-house/tools"
+    "../haunted-house/tools",
+    "../haunted-house/packs/classic/source"
   ],
   "typeCheckingMode": "basic",
   "venvPath": ".",

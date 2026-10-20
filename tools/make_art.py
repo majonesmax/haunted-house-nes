@@ -17,6 +17,7 @@ Makes, in build/faithful/art or build/shareable/art:
 Usage: python tools/make_art.py [--shareable]
 """
 
+import json
 import os
 import sys
 from typing import NamedTuple
@@ -48,8 +49,8 @@ CHR_BYTES = 64 * 1024      # up to eight floor sets, the sprites' set, the title
 MAPS_SEGMENTS = ("MAPS", "MAPS_2")   # the floors' maps: four to a bank (src/mmc3.cfg)...
 MAPS_BANKS = (0, 3)                  # ...in program banks 0 and 3
 FLOORS_PER_BANK = 4
-# each floor's song, by the classic floor its pictures are (mansion_pack.STYLES): the attic is quiet
-STYLE_SONGS = {1: "SONG_FLOOR1", 2: "SONG_FLOOR2", 3: "SONG_FLOOR3", 4: "NO_SONG"}
+FAITHFUL_SONGS = ["floor1", "floor2", "floor3", None]   # the classic floors' songs; the attic is quiet
+MANSION_MUSIC = os.path.join(ROOT, "mansion", "music.json")   # the shareable build's: its floor_songs
 BLACK = 0x0F
 COLOURS = 3
 KMEANS_ROUNDS = 25
@@ -569,6 +570,13 @@ def floors_include(floors: list[FloorArt], songs: list[str]) -> list[str]:
             "floor_songs:  .byte " + ", ".join(songs)]
 
 
+def floor_song_names(shareable: bool) -> list[str | None]:
+    if not shareable:
+        return FAITHFUL_SONGS
+    with open(MANSION_MUSIC) as music_file:
+        return json.load(music_file)["floor_songs"]
+
+
 def main() -> None:
     shareable = "--shareable" in sys.argv
     output = os.path.join(ROOT, "build", "shareable" if shareable else "faithful", "art")
@@ -584,8 +592,7 @@ def main() -> None:
     chr_data += b"".join(sprites.pairs).ljust(SET_BYTES, b"\0")
     screen_chr, screen_lines = screen_sets(look)
     chr_data += screen_chr
-    styles = list(mansion_pack.STYLES.values()) if shareable else list(range(1, FAITHFUL_FLOORS + 1))
-    songs = [STYLE_SONGS[style] for style in styles]
+    songs = [f"SONG_{name.upper()}" if name else "NO_SONG" for name in floor_song_names(shareable)]
     os.makedirs(output, exist_ok=True)
     with open(os.path.join(output, "tiles.chr"), "wb") as chr_file:
         chr_file.write(bytes(chr_data).ljust(CHR_BYTES, b"\0"))

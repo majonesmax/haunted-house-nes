@@ -66,7 +66,9 @@ audio_frame:
     jsr hear_events
     ldx #0
 @voice:
+    jsr use_song_bank     ; the song's streams may be in the second music bank...
     jsr song_step
+    jsr use_music_bank    ; ...the effects are in the first
     lda effect_left, x
     beq @write
     jsr effect_step
@@ -75,6 +77,26 @@ audio_frame:
     inx
     cpx #VOICES
     bne @voice
+    rts
+
+; The program bank at $A000: the playing song's (song_banks), or the first music bank. Both banks start with
+; the same tables (tools/make_music.py), so either reads them. The bank register is written as use_extras
+; writes it (screens.s), so an NMI between the two writes does no harm. Keeps X.
+use_song_bank:
+    ldy song_playing
+    cpy #NO_SONG
+    beq use_music_bank
+    lda song_banks, y
+    jmp set_music_bank
+use_music_bank:
+    lda #MUSIC_BANK
+set_music_bank:
+    pha
+    lda #PROGRAM_BANK_A000
+    sta bank_select
+    sta BANK_SELECT
+    pla
+    sta BANK_DATA
     rts
 
 ; --- the songs -----------------------------------------------------------------------------------------
@@ -138,12 +160,19 @@ start_song:
 
 ; In: A = a song. Out: carry set if it's one of the floors' songs.
 is_floor_song:
-    cmp #SONG_FLOOR1
-    bcc @no
-    cmp #(SONG_FLOOR3 + 1)
-    rts                   ; carry clear if past them: turn it round
+    cmp #NO_SONG
+    beq @no
+    ldy #(FLOOR_COUNT - 1)
+@floor:
+    cmp floor_songs, y
+    beq @yes
+    dey
+    bpl @floor
 @no:
     clc
+    rts
+@yes:
+    sec
     rts
 
 ; Every voice's place in the song, kept while another plays, and back again.

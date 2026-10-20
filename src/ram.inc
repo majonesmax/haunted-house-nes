@@ -248,7 +248,8 @@ work_part:      .res 1    ; which part the work is in: 1 the game, 2 the picture
 late_part:      .res 1    ; ...and which part it was in when a frame ran late
 draw_row:       .res 1    ; drawing a whole floor: the next row...
 draw_count:     .res 1    ; ...and how many are done
-bands_drawn:    .res 1    ; not 0: the status band and the band below have their words
+bands_drawn:    .res 1
+attributes_written: .res 1  ; drawing a whole floor: its attributes are written, the sprites come next    ; not 0: the status band and the band below have their words
 eye_x:          .res 1    ; the eyes' centre in nametable pixels...
 eye_y:          .res 2    ; ...and in floor pixels
 block_row:      .res 1

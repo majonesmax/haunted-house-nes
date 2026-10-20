@@ -16,6 +16,7 @@ from tools/shareable.py), floor by floor, so the new mansion has the same proof 
 Usage: python tests/verify_engine.py [--shareable] [frames per game] [seed]   (exit code 1 on any mismatch)
 """
 
+import faulthandler
 import os
 import sys
 from typing import Iterable
@@ -34,6 +35,7 @@ from lab import BUTTON, RESET  # noqa: E402
 from game import rom as R  # noqa: E402
 
 STATE_START, STATE_END = 0x80, 0x100
+WATCHDOG_SECONDS = 1500     # far past a whole run's time: from then on, every Python thread's stack, often
 RESET_HELD, AFTER_RESET = 5, 5
 
 
@@ -78,6 +80,7 @@ class NesLab:
 
 
 def main() -> None:
+    faulthandler.dump_traceback_later(WATCHDOG_SECONDS, repeat=True)   # a run that never ends says where
     our_mansion = shareable_wanted(sys.argv)
     frames = int(sys.argv[1]) if len(sys.argv) > 1 else V.FRAMES_PER_GAME
     seed = int(sys.argv[2]) if len(sys.argv) > 2 else 0

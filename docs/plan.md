@@ -76,7 +76,7 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    band under the view (`src/hints.s`; `tests/test_hints.py` checks their words against the remaster's
    game/hints.py). B with Select is the lights-on cheat (`src/cheat.s`): while B is held, Select is never the
    game's. Lightning is in the picture and the sound. Possible later: "YOU ESCAPED!" at the door.
-7. **The new mansion** - mostly done: six floors, each with its own plan, walls, doors, locks and stairs
+7. **The new mansion** - done: six floors, each with its own plan, walls, doors, locks and stairs
    (games 1-8, and game 9's), drawn as text in `mansion/floors.txt` (chosen 2026-10-20 over more floors on
    one plan, or bigger floors). The pieces:
    - the engine reads every mansion table floor by floor (`src/mansion.s`); the faithful build gives each
@@ -91,9 +91,16 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
      shapes from our own pictures, and our own numbers where the spec leaves them to the ROM;
    - the remaster's model can run a mansion of its own (its `game/rom.py` Floors), so
      `tests/verify_engine.py --shareable` checks the new mansion frame by frame, as the original is;
-   - the floors' pictures borrow the classic pack's four floors (`tools/mansion_pack.py`); still to do: art
-     of their own for the Gallery, the Bedrooms and the Nursery, and maybe their own songs.
-8. **Release**: the shareable ROM, built and checked by GitHub; the faithful build stays a recipe.
+   - the floors' pictures are text art (`mansion/art.py`): the Foyer, the Library (the classic dining hall)
+     and the Attic as the classic pack draws them, the Gallery, the Bedrooms and the Nursery our own;
+     `tools/mansion_pack.py` makes them a pack for the remaster's look to draw;
+   - the Gallery, the Bedrooms and the Nursery have songs of their own (`mansion/music.json`), in a second
+     music bank (bank 4 at $A000, switched in while one of them plays; both banks start with the same
+     tables).
+8. **Release** - ready: `.github/workflows/build.yml` builds the shareable ROM on GitHub, with nothing but this
+   repository and the remaster, and checks it (the code, the mansion, boot, the frame-by-frame check, the
+   hints); a `v*` tag makes the release, with the notes in `docs/release-notes/`. The faithful build stays a
+   recipe. Licences: MIT for the code, CC BY 4.0 for the art and music, as the remaster's.
 
 Then the SNES: the same engine idea on the SNES's 65816 processor, with the remaster's SNES look.
 

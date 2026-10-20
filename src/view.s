@@ -252,6 +252,7 @@ start_drawing:
     lda #1
     sta drawing
     lda #0
+    sta attributes_written
     sta screen_off
     sta draw_count
     sta row_waiting
@@ -299,9 +300,15 @@ continue_drawing:
     jsr clear_bands       ; a few frames of their own, the first time
     rts
 @bands_there:
+    lda attributes_written
+    bne @compose
     jsr write_floor_name
     jsr write_all_attributes
+    inc attributes_written   ; (the sprites and colours next frame: both in one were too much for a frame
+    rts                      ; that also has a lot to touch - dying with a match lit)
+@compose:
     lda #0
+    sta attributes_written
     sta drawing
     jmp compose_frame
 
