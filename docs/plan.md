@@ -56,9 +56,13 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    is the remaster's own check with the NES in place of the 2600: over three runs of 90,000 frames the
    NES's state matches the model on every frame it compares, and the NES never takes longer than a frame.
    Nothing is drawn yet; the game runs without a picture or sound.
-4. **The picture**: the floor as background tiles that scroll, the eyes, items and monsters as sprites (all of
-   them every frame - no flicker), the status line, the dark and the match's light, lightning. The art comes
-   from the remaster's NES look, redrawn as 8×8 tiles in four colours.
+4. **The picture** - mostly done: the screen split into a status band, the view and a band below (MMC3
+   scanline interrupts); each floor's tiles and map made from the remaster's floor pictures
+   (`tools/make_art.py`), streamed in as the view scrolls; the dark, the match's light and lightning by
+   palettes; the cast as sprites, all of them every frame, with palettes handed out to what's on screen.
+   Still to do: the status band's item slots, the urn's shimmer, an art pass (the bat lost its green eyes and
+   the hand its flame in three colours), and trimming the sprites' work before the sound needs time - the
+   busiest frame has about 5,000 cycles to spare (`tools/profile.py`).
 5. **The sound**: the NES's sound chip playing the remaster's NES-look effects and music.
 6. **The remaster's extras**: the title screen and story, G's hints, the lights-on cheat, the storm, the
    ending.
@@ -68,11 +72,18 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
 
 Then the SNES: the same engine idea on the SNES's 65816 processor, with the remaster's SNES look.
 
-## Things to decide along the way
+## The picture: decisions
 
-- **The dark.** The NES can't light a soft circle pixel by pixel. A match could light the tiles around the
-  eyes (updated a few tiles a frame), with sprites softening the edge. To try in step 4.
-- **The mapper.** Mapper 0 (32K of code, 8K of tiles) may be enough; if the art or the new mansion needs more,
-  a common mapper such as MMC1.
-- **The bigger mansion**: more floors, more rooms a floor, or both, and what that means for the waypoints and
-  the monsters' speed.
+- **Improve where the real NES allows**, rather than copying the remaster's imitation of it.
+- **The board: MMC3** (mapper 4). Its scanline counter splits the screen - a fixed status band, the
+  scrolling view, a fixed band below - and its banks give each floor its own tiles.
+- **Colours: three per floor, plus black** (chosen 2026-10-20 from mocks in shots/). The view's art is the
+  remaster's floor picture cut down to three NES colours, so that the light can work by palettes alone.
+- **The light: palettes on 16x16 blocks.** Three palettes hold the same three colours lit, dim and unlit; the
+  blocks around the eyes are switched to lit at the core and dim in a ring. Unlit is black in games 2-9,
+  dim in game 1 (the walls are always seen); a lightning flash brightens the unlit palette. Only a few
+  attribute bytes change a frame.
+- **Sprites for everything that moves**, all drawn every frame (no flicker unless more than 8 share a line).
+
+Still open: a bigger cartridge for the new mansion, if it needs one; animating decorations by switching tile
+banks (candles, portraits' eyes) - something the remaster can't do the NES way.

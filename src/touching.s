@@ -1,10 +1,9 @@
 ; Touching (spec, "Touching"): on the 2600 the hardware noted where the sprite overlapped the eyes or the
-; walls as it drew the picture. Here the same comes out of the rule for what shows on each scanline:
-;   first scanline of a line:  the eyes' row for this line, the sprite's row for the line above
-;   second scanline:           both rows for this line
-; The first line drawn shows no eyes and no sprite on its first scanline; the last has no second scanline.
-; So each of the sprite's rows, on line L, can touch on L's second scanline and on the first scanline of
-; L - 1 - only those are tested, not every line.
+; walls as it drew the picture. Here the same comes out of the rule for what each line shows:
+;   its first scanline:   the eyes' row for this line, the sprite's row for the line above
+;   its second scanline:  both rows for this line
+; The first line drawn shows no eyes and no sprite on its first scanline; the last has no second. Only
+; the lines with sprite rows are walked, and each line's walls are worked out once, for both scanlines.
 
 find_touches:
     lda #0
@@ -14,69 +13,79 @@ find_touches:
     beq @done
     jsr build_eyes
     jsr drawn_lines
-    lda #0
-    sta touch_k
-@row:
-    lda touch_k
-    jsr sprite_row
-    beq @next_row
-    sta touch_row
-    lda sprite_line
+    jsr start_walls
+    lda sprite_line       ; from the line below the sprite's bottom row to its top row
+    sec
+    sbc #1
+    sta wall_line
+    lda sprite_height
     clc
-    adc touch_k
-    sta sprite_row_line
-    jsr second_scanline
-    jsr first_scanline_below
-@next_row:
-    inc touch_k
-    lda touch_k
-    cmp sprite_height
-    bne @row
+    adc #1
+    sta touch_lines_left
+@line:
+    jsr test_line
+    inc wall_line
+    dec touch_lines_left
+    bne @line
 @done:
     rts
 
-; The row on its own line's second scanline: if the line is drawn and isn't the last.
-second_scanline:
-    lda sprite_row_line
+; One line (wall_line), if it's drawn: its first scanline (unless it's the first line drawn), its second
+; (unless it's the last).
+test_line:
+    lda wall_line
+    cmp #$80              ; below line 0 (wrapped)
+    bcs @done
     cmp line_top
     beq @drawn
-    bcs @done             ; above the lines drawn (or wrapped round below 0)
+    bcs @done
 @drawn:
     cmp line_below
     beq @done
     bcc @done
-    sec
-    sbc #1
-    cmp line_below        ; the last line drawn has no second scanline
-    beq @done
-    lda sprite_row_line
-    jmp test_line
-@done:
-    rts
-
-; The row on the first scanline of the line below: if that line is drawn and isn't the first.
-first_scanline_below:
-    lda sprite_row_line
-    beq @done
-    sec
-    sbc #1
+    lda wall_line         ; the first scanline: the row of the line above, unless this is the top line
     cmp line_top
-    bcs @done
+    beq @second
+    clc
+    adc #1
+    jsr sprite_row_on
+    jsr test_scanline
+@second:
+    lda wall_line         ; the second scanline: this line's row, unless the next line down isn't drawn
+    sec
+    sbc #1
     cmp line_below
     beq @done
-    bcc @done
-    jmp test_line
+    lda wall_line
+    jsr sprite_row_on
+    jmp test_scanline
 @done:
     rts
 
-; In: A = a line, touch_row = the sprite's row shown on it. Notes what it touches.
-test_line:
-    sta wall_line
-    cmp line_top          ; the first line drawn shows no eyes
-    beq @walls
+; In: A = a line. Out: A = the sprite's row drawn on it, or 0.
+sprite_row_on:
+    sec
+    sbc sprite_line
+    cmp sprite_height
+    bcs @none
+    clc
+    adc sprite_pointer
+    tay
+    lda shapes, y
+    rts
+@none:
+    lda #0
+    rts
+
+; In: A = the sprite's row on a scanline of wall_line. Notes what it touches.
+test_scanline:
+    beq @done
+    sta touch_row
     lda touched_eyes
     bne @walls
-    lda wall_line
+    lda wall_line         ; the first line drawn shows no eyes
+    cmp line_top
+    beq @walls
     jsr eyes_row_on
     beq @walls
     sta eyes_now
@@ -88,14 +97,6 @@ test_line:
     bne @done
     jmp row_hits_wall
 @done:
-    rts
-
-; In: A = a row number. Out: A = that row of the sprite's shape.
-sprite_row:
-    clc
-    adc sprite_pointer
-    tay
-    lda shapes, y
     rts
 
 ; The eyes' three rows, bottom first: two eyes in each, and in one row the pupils, looking the way the
@@ -212,53 +213,8 @@ rows_overlap:
 @done:
     rts
 
-; Does touch_row, on wall_line, overlap a wall? A row covers at most 16 columns, so at most two wall cells:
-; one wall test for each, then the row's pixels against them. (A stretched sprite has each pixel twice and
-; starts a pixel to the right, as the TIA does.) In the middle row near the screen's sides, where the
-; edge strips are, each pixel is tested on its own instead.
-row_hits_wall:
-    lda wall_line         ; the floor y: wall_line - eyes_line + player_y, if it's on the floor at all
-    sec
-    sbc eyes_line
-    tax                   ; keep the borrow in the carry...
-    lda #0
-    sbc #0                ; ...as a high byte: $FF if negative
-    sta touch_count
-    txa
-    clc
-    adc player_y
-    sta touch_y
-    lda touch_count
-    adc #0
-    bne @done             ; not between 0 and 255
-    jsr spread_row
-    lda sprite_x
-    ldx sprite_wide
-    beq @start_found
-    clc
-    adc #1
-@start_found:
-    sta touch_column
-    lda touch_y
-    lsr
-    lsr
-    lsr
-    lsr
-    cmp #MIDDLE_ROW
-    bne @by_cells
-    lda touch_column
-    cmp #EDGE_STRIP
-    bcc @by_pixels
-    cmp #(SCREEN_WIDTH - EDGE_STRIP - 15)
-    bcs @by_pixels
-@by_cells:
-    jmp row_hits_wall_cells
-@by_pixels:
-    jmp row_hits_wall_pixels
-@done:
-    rts
-
 ; touch_row as 16 columns from touch_column: touch_wide_high, touch_wide_low (bit 7 of high is leftmost).
+; Stretched, each pixel twice: four at a time, from a table.
 spread_row:
     lda sprite_wide
     bne @stretch
@@ -269,24 +225,87 @@ spread_row:
     rts
 @stretch:
     lda touch_row
-    sta touch_pixels
-    ldx #8
-@pixel:
-    asl touch_pixels
-    php
-    rol touch_wide_low    ; each pixel twice
-    rol touch_wide_high
-    plp
-    rol touch_wide_low
-    rol touch_wide_high
-    dex
-    bne @pixel
+    lsr
+    lsr
+    lsr
+    lsr
+    tax
+    lda stretched, x
+    sta touch_wide_high
+    lda touch_row
+    and #$0F
+    tax
+    lda stretched, x
+    sta touch_wide_low
     rts
 
-; The two cells' walls as a 16-column mask - the columns before the cell boundary from the first, the
-; rest from the second - against the row.
-row_hits_wall_cells:
-    lda touch_column      ; columns in the first cell: 16 - (column mod 16), 1-16
+; The sprite's first column on screen (a stretched sprite starts a pixel to the right, as the TIA does).
+start_walls:
+    lda #$FF
+    sta walls_line        ; no line's walls worked out yet
+    lda sprite_x
+    ldx sprite_wide
+    beq @found
+    clc
+    adc #1
+@found:
+    sta touch_column
+    rts
+
+; Does touch_row, on wall_line, overlap a wall?
+row_hits_wall:
+    lda wall_line
+    cmp walls_line
+    beq @compare
+    jsr line_walls
+@compare:
+    lda walls_on_line
+    beq @done             ; not on the floor
+    jsr spread_row
+    lda touch_wide_high
+    and walls_high
+    bne @hit
+    lda touch_wide_low
+    and walls_low
+    bne @hit
+@done:
+    rts
+@hit:
+    lda #1
+    sta touched_walls
+    rts
+
+; The walls in the 16 columns from touch_column on wall_line, as walls_high/walls_low (bit 7 of high is
+; leftmost): the two wall cells those columns cross - the first's columns up to the boundary, then the
+; second's - and in the middle row, the strips at the screen's sides instead of the cells outside the plan.
+line_walls:
+    sta walls_line
+    lda #0
+    sta walls_high
+    sta walls_low
+    sta walls_on_line
+    lda wall_line         ; the floor y: wall_line - eyes_line + player_y, if it's on the floor at all
+    sec
+    sbc eyes_line
+    tax
+    lda #0
+    sbc #0                ; the borrow as a high byte: $FF if negative
+    sta touch_count
+    txa
+    clc
+    adc player_y
+    sta touch_y
+    lda touch_count
+    adc #0
+    bne @done             ; not between 0 and 255
+    inc walls_on_line
+    lda touch_y
+    lsr
+    lsr
+    lsr
+    lsr
+    sta touch_wall_row
+    lda touch_column      ; the first cell's columns: 16 - (column mod 16)
     and #15
     tax
     lda first_cell_high, x
@@ -294,88 +313,88 @@ row_hits_wall_cells:
     lda first_cell_low, x
     sta touch_mask_low
     lda touch_column
-    ldy touch_y
-    jsr wall_at
-    bcs @first_is_wall
-    lda #0                ; the first cell is open: drop its columns from the mask
-    sta touch_first_cell_high
-    sta touch_first_cell_low
-    jmp @second
-@first_is_wall:
+    jsr cell_is_wall
+    bcc @second
     lda touch_mask_high
-    sta touch_first_cell_high
+    sta walls_high
     lda touch_mask_low
-    sta touch_first_cell_low
+    sta walls_low
 @second:
     lda touch_column
     clc
     adc #15
-    ldy touch_y
-    jsr wall_at
-    bcc @compare
-    lda touch_mask_high   ; the second cell is wall: its columns too
+    jsr cell_is_wall
+    bcc @strips
+    lda touch_mask_high   ; the rest of the 16 columns
     eor #$FF
-    ora touch_first_cell_high
-    sta touch_first_cell_high
+    ora walls_high
+    sta walls_high
     lda touch_mask_low
     eor #$FF
-    ora touch_first_cell_low
-    sta touch_first_cell_low
-@compare:
-    lda touch_wide_high
-    and touch_first_cell_high
-    bne @hit
-    lda touch_wide_low
-    and touch_first_cell_low
-    bne @hit
-    rts
-@hit:
-    lda #1
-    sta touched_walls
+    ora walls_low
+    sta walls_low
+@strips:
+    lda touch_wall_row
+    cmp #MIDDLE_ROW
+    bne @done
+    jsr edge_strips
+@done:
     rts
 
-; Each lit pixel tested on its own (near the edge strips).
-row_hits_wall_pixels:
-    lda #16
-    sta touch_count
-@pixel:
-    asl touch_wide_low
-    rol touch_wide_high
-    bcc @next
-    lda touch_column
-    jsr wall_pixel
-    bcs @hit
-@next:
-    inc touch_column
-    dec touch_count
-    bne @pixel
+; In: A = a column; touch_wall_row, touch_y. Out: carry set if its wall cell is wall. Outside the plan's
+; columns that's every row but the middle one (where only the strips are, added separately).
+cell_is_wall:
+    tax
+    lsr
+    lsr
+    lsr
+    lsr
+    sec
+    sbc #1
+    and #$08
+    beq @plan
+    lda touch_wall_row
+    cmp #MIDDLE_ROW
+    beq @open
+    sec
     rts
-@hit:
-    lda #1
-    sta touched_walls
+@open:
+    clc
     rts
-
-; In: A = a screen column; touch_y = the floor y. Out: carry set if a wall is drawn there: the wall plan,
-; and in the middle row a strip at each side of the screen.
-wall_pixel:
-    cmp #EDGE_STRIP
-    bcc @edge
-    cmp #(SCREEN_WIDTH - EDGE_STRIP)
-    bcs @edge
 @plan:
+    txa
     ldy touch_y
     jmp wall_at
-@edge:
+
+; The middle row's strips: columns 0-3 and 156-159, where they fall in the 16 from touch_column.
+; first_cell_high/low[m] has the first 16 - m of the 16 columns set.
+edge_strips:
+    lda touch_column
+    cmp #EDGE_STRIP
+    bcs @right
+    clc                   ; the first 4 - column columns: index 16 - (4 - column) = 12 + column
+    adc #(16 - EDGE_STRIP)
     tax
-    lda touch_y
-    lsr
-    lsr
-    lsr
-    lsr
-    cmp #MIDDLE_ROW
-    beq @strip
-    txa
-    jmp @plan
-@strip:
+    lda first_cell_high, x
+    ora walls_high
+    sta walls_high
+    lda first_cell_low, x
+    ora walls_low
+    sta walls_low
+@right:
+    lda touch_column      ; the columns from 156 - column on: all but the first (156 - column), i.e. the
+    cmp #(SCREEN_WIDTH - EDGE_STRIP - 15)   ; inverse of index 16 - (156 - column) = column - 140
+    bcc @done
     sec
+    sbc #(SCREEN_WIDTH - EDGE_STRIP - 16)
+    tax
+    lda first_cell_high, x
+    eor #$FF
+    ora walls_high
+    sta walls_high
+    lda first_cell_low, x
+    eor #$FF
+    ora walls_low
+    sta walls_low
+@done:
     rts
