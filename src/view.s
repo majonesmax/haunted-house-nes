@@ -58,7 +58,11 @@ prepare_picture:
     sec
     sbc loaded_first
     cmp #(NAMETABLE_ROWS - VIEW_ROWS + 1)
-    bcs @jumped
+    bcc @in_view
+    lda loaded_first      ; (at the floor's bottom the view, aligned there, needs only 20 rows: if the
+    cmp #(FLOOR_ROWS - NAMETABLE_ROWS)   ; loaded rows reach the floor's end, they hold all it can need)
+    bcc @jumped
+@in_view:
     jsr stream_rows
     jsr compose_frame
     rts
