@@ -150,7 +150,7 @@ use_extras:
     sta BANK_DATA
     rts
 
-; The floor's maps bank (floor_banks: four floors to a bank).
+; The floor's maps bank (floor_banks: three floors to a bank).
 use_maps:
     lda #PROGRAM_BANK_8000
     sta bank_select

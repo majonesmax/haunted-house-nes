@@ -8,7 +8,7 @@ Makes, in build/faithful/art or build/shareable/art:
   tiles.chr     the cartridge's tile memory (CHR): per floor a 4K set (font, then the floor's tiles), then
                 the sprites' 4K, the title's and the ending's
   art.inc       the maps' banks: each starts with the floors' colours and names and the light's shape, then
-                the maps (the tile on every 8x8 of a floor's 240 x 512 picture) of its four floors
+                the maps (the tile on every 8x8 of a floor's 240 x 512 picture) of its three floors
   floors.inc    by floor: where its map, colours and name are, its maps bank, its song
   font.inc      the font's character map, so text in the code is written as text
   sprites.inc   the cast: each picture as 8x16 pieces, and each kind's three colours

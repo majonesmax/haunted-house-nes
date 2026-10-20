@@ -91,10 +91,12 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
      shapes from our own pictures, and our own numbers where the spec leaves them to the ROM;
    - the remaster's model can run a mansion of its own (its `game/rom.py` Floors), so
      `tests/verify_engine.py --shareable` checks the new mansion frame by frame, as the original is;
-   - the floors' pictures are text art (`mansion/art.py`): the Foyer, the Library (the classic dining hall)
-     and the Attic as the classic pack draws them, the Gallery, the Bedrooms and the Nursery our own;
-     `tools/mansion_pack.py` makes them a pack for the remaster's look to draw;
-   - the Gallery, the Bedrooms and the Nursery have songs of their own (`mansion/music.json`), in a second
+   - the house, from the bottom: the Cellar, the Foyer (the front door's floor, where a game starts), the
+     Gallery, the Bedrooms and the Attic; the status band shows the Cellar as floor B;
+   - the floors' pictures are text art (`mansion/art.py`): the Foyer and the Attic as the classic pack draws
+     them, the Cellar, the Gallery and the Bedrooms our own; `tools/mansion_pack.py` makes them a pack for
+     the remaster's look to draw;
+   - the Cellar, the Gallery and the Bedrooms have songs of their own (`mansion/music.json`), in a second
      music bank (bank 4 at $A000, switched in while one of them plays; both banks start with the same
      tables).
 8. **Release** - ready: `.github/workflows/build.yml` builds the shareable ROM on GitHub, with nothing but this

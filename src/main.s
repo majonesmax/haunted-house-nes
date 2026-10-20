@@ -209,7 +209,7 @@ first_cell_high:    .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FE, $FC,
 first_cell_low:     .byte $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00, $00, $00, $00, $00, $00
 
 .segment "MAPS"
-.include "art.inc"        ; (it opens the maps' banks itself: MAPS, then MAPS_2 for floors 5-8)
+.include "art.inc"        ; (it opens the maps' banks itself: MAPS, then MAPS_2 for floors 4-6)
 .segment "RODATA"
 .include "floors.inc"
 .segment "MUSIC"

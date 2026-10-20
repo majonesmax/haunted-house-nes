@@ -270,7 +270,7 @@ fill_row_buffer:
 
 ; --- a whole floor --------------------------------------------------------------------------------------
 start_drawing:
-    jsr use_maps          ; (floors 5-8 have their maps in a bank of their own)
+    jsr use_maps          ; (floors 4-6 have their maps in a bank of their own)
     lda floor
     sta shown_floor
     asl                   ; its tile set: 1K banks floor * 4 on

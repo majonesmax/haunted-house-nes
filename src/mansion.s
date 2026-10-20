@@ -1,6 +1,6 @@
 ; The mansion's tables, floor by floor (docs/plan.md, step 7): each table in mansion.inc that can differ
 ; from floor to floor holds one part per floor, one after another, and a read adds that floor's start.
-; The faithful build's four parts are all the original's one plan; the new mansion's six are its own.
+; The faithful build's four parts are all the original's one plan; the new mansion's five are its own.
 ; (The rooms are a 2 x 3 grid on every floor, so room_step and the waypoints' kinds are shared.)
 
 .if FLOOR_COUNT <= 4
