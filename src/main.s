@@ -7,7 +7,7 @@
 .segment "HEADER"
     .byte "NES", $1A      ; iNES
     .byte 4               ; 64K of program
-    .byte 4               ; 32K of tiles
+    .byte 8               ; 64K of tiles
     .byte $41, 0          ; mapper 4 (MMC3)
     .res 8, 0
 
@@ -193,7 +193,9 @@ first_cell_high:    .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FE, $FC,
 first_cell_low:     .byte $FF, $FE, $FC, $F8, $F0, $E0, $C0, $80, $00, $00, $00, $00, $00, $00, $00, $00
 
 .segment "MAPS"
-.include "art.inc"
+.include "art.inc"        ; (it opens the maps' banks itself: MAPS, then MAPS_2 for floors 5-8)
+.segment "RODATA"
+.include "floors.inc"
 .segment "MUSIC"
 .include "sound.inc"
 .segment "EXTRAS"

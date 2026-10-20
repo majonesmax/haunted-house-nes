@@ -13,14 +13,20 @@ predict the original game exactly. Python here is for tools and checks only.
 .venv/bin/python tools/extract.py        # the original mansion from your 2600 ROM -> build/faithful/ (never commit)
 .venv/bin/python tools/make_art.py       # the tiles and sprites from the remaster's NES look -> build/art/
 .venv/bin/python tools/make_music.py     # the soundtrack and effects from the remaster's -> build/sound/
-.venv/bin/python tools/build.py          # build/haunted_house_faithful.nes (ca65 + ld65, src/mmc3.cfg)
+.venv/bin/python tools/build.py          # build/faithful/haunted_house_faithful.nes (ca65 + ld65, src/mmc3.cfg)
+.venv/bin/python tools/build.py --shareable   # build/shareable/haunted_house.nes: our mansion, nothing from the ROM
+                                         # (the other tools and tests take --shareable too)
+.venv/bin/python tools/check_mansion.py  # mansion/floors.txt plays as the original does (after any change to it)
+.venv/bin/python tools/draw_mansion.py   # its plans as a picture: shots/mansion.png
+.venv/bin/python tests/test_mansion.py   # the text format gets the original's tables back exactly
+.venv/bin/python tests/test_check_mansion.py  # the checker catches broken mansions
 .venv/bin/python tools/record_sound.py NAME 30 6:start 600   # play some frames, save shots/sound/NAME.wav
 .venv/bin/python tools/screenshot.py NAME 30 6:start 60   # play some frames, save shots/NAME.png
 .venv/bin/python tools/profile.py 30 6:start 30 5:a      # cycles per routine for one frame (py65)
 .venv/bin/python tests/test_boot.py      # it boots in the emulator (tools/nes.py, FCEUmm in cores/)
 .venv/bin/python tests/verify_engine.py  # the engine against the remaster's model, frame by frame (run it after
-                                         # any change to src/; it also fails if a frame runs late -
-                                         # the NES counts them, and its spare time, in late_frames/last_spare)
+                                         # any change to src/, on both builds; it also fails if a frame runs
+                                         # late - the NES counts them, and its spare time, in late_frames)
 .venv/bin/python tests/test_hints.py     # B's hints and the two notes say what the remaster's say, in random scenes
 .venv/bin/python tools/readability.py    # the Python readability rules (a hook runs it after each edit)
 ```
@@ -30,7 +36,10 @@ predict the original game exactly. Python here is for tools and checks only.
 - **Write the engine from the spec and the models, never from the disassembly.** The original's code is
   Atari's; the rules aren't.
 - **Never commit anything from the 2600 ROM**: its tables, its pictures, or a faithful build. They're made in
-  `build/` from the user's own ROM and stay there.
+  `build/faithful/` from the user's own ROM and stay there. The shareable build (`build/shareable/`) must
+  hold nothing from it: its mansion, shapes and numbers are our own (`tools/shareable.py`).
+- **Change the mansion as text**: `mansion/floors.txt`, then `tools/check_mansion.py`, then the shareable
+  engine check.
 - **Keep the game's state where the 2600 kept it**: zero page `$80`-`$FF`, same bytes, same meanings. The
   check compares it with the model frame by frame. Put everything the NES needs besides in `$00`-`$7F` and
   the rest of RAM.

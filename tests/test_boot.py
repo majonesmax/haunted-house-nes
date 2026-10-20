@@ -7,7 +7,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
-from build import build  # noqa: E402
+from build import build, shareable_wanted  # noqa: E402
 from nes import Nes  # noqa: E402
 
 READY = 0x42
@@ -16,7 +16,7 @@ FRAMES = 60
 
 
 def main() -> None:
-    nes = Nes(build())
+    nes = Nes(build(shareable=shareable_wanted(sys.argv)))
     nes.run(10)
     counted_before = int(nes.ram[FRAME_COUNT])
     nes.run(FRAMES)

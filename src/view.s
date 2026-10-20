@@ -243,6 +243,7 @@ fill_row_buffer:
 
 ; --- a whole floor --------------------------------------------------------------------------------------
 start_drawing:
+    jsr use_maps          ; (floors 5-8 have their maps in a bank of their own)
     lda floor
     sta shown_floor
     asl                   ; its tile set: 1K banks floor * 4 on
@@ -561,16 +562,17 @@ light_key_changed:
     lda shown_floor
     sta light_key + 6
     ldx #(LIGHT_KEY_BYTES - 1)
-    clc
+    ldy #0                ; (1 once anything has changed: cmp uses the carry, so it can't keep the answer)
 @compare:
     lda light_key, x
     cmp last_light_key, x
     beq @same
     sta last_light_key, x
-    sec
+    ldy #1
 @same:
     dex
     bpl @compare
+    cpy #1                ; the carry set if anything changed
     rts
 
 ; The eyes' centre, in nametable pixels across and floor pixels down, and the blocks around it.
@@ -1282,9 +1284,6 @@ sprite_colours:   .byte BLACK_COLOUR, $30, $10, $27,  BLACK_COLOUR, $30, $10, $0
 keep_other_blocks: .byte %11111100, %11110011, %11001111, %00111111
 palette_bits:     ; a palette 0-3 in each of the four blocks of an attribute byte
     .byte $00, $01, $02, $03,  $00, $04, $08, $0C,  $00, $10, $20, $30,  $00, $40, $80, $C0
-floor_maps:       .word floor1_map, floor2_map, floor3_map, floor4_map
-floor_colours:    .word floor1_colours, floor2_colours, floor3_colours, floor4_colours
-floor_names:      .word floor1_name, floor2_name, floor3_name, floor4_name
 status_places:    ; where each changing tile goes (compose_status's order)
     place STATUS_VALUES_ROW, 1          ; the matches used
     place STATUS_VALUES_ROW, 2

@@ -76,8 +76,23 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    band under the view (`src/hints.s`; `tests/test_hints.py` checks their words against the remaster's
    game/hints.py). B with Select is the lights-on cheat (`src/cheat.s`): while B is held, Select is never the
    game's. Lightning is in the picture and the sound. Possible later: "YOU ESCAPED!" at the door.
-7. **The new mansion**: designed for the NES, bigger than the original, with a check that its waypoints keep
-   monsters out of the walls and every door and stairway works.
+7. **The new mansion** - mostly done: six floors, each with its own plan, walls, doors, locks and stairs
+   (games 1-8, and game 9's), drawn as text in `mansion/floors.txt` (chosen 2026-10-20 over more floors on
+   one plan, or bigger floors). The pieces:
+   - the engine reads every mansion table floor by floor (`src/mansion.s`); the faithful build gives each
+     floor the original's one plan, and its check is still exact;
+   - `tools/mansion.py` works the tables out from the text, as the original's are from its plan
+     (`tests/test_mansion.py` gets the original's bytes back from it exactly);
+   - `tools/check_mansion.py` checks a mansion plays: the plan's shape, doorways, monsters' walks clear of
+     walls, stairs that meet, the start, and every room reachable without the key in every game - the
+     original's own rule (`tests/test_check_mansion.py` breaks it five ways and expects each caught);
+     `tools/draw_mansion.py` draws the plans;
+   - `tools/shareable.py` makes the shareable build's mansion with nothing from the ROM: our floors, touching
+     shapes from our own pictures, and our own numbers where the spec leaves them to the ROM;
+   - the remaster's model can run a mansion of its own (its `game/rom.py` Floors), so
+     `tests/verify_engine.py --shareable` checks the new mansion frame by frame, as the original is;
+   - the floors' pictures borrow the classic pack's four floors (`tools/mansion_pack.py`); still to do: art
+     of their own for the Gallery, the Bedrooms and the Nursery, and maybe their own songs.
 8. **Release**: the shareable ROM, built and checked by GitHub; the faithful build stays a recipe.
 
 Then the SNES: the same engine idea on the SNES's 65816 processor, with the remaster's SNES look.
@@ -95,5 +110,8 @@ Then the SNES: the same engine idea on the SNES's 65816 processor, with the rema
   attribute bytes change a frame.
 - **Sprites for everything that moves**, all drawn every frame (no flicker unless more than 8 share a line).
 
-Still open: a bigger cartridge for the new mansion, if it needs one; animating decorations by switching tile
+The cartridge: 64K of program (the floors' maps in banks 0 and 3) and 64K of tiles, for both builds. The
+fixed bank is nearly full: new code or tables go in a bank of their own.
+
+Still open: animating decorations by switching tile
 banks (candles, portraits' eyes) - something the remaster can't do the NES way.

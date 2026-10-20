@@ -15,12 +15,11 @@ from collections import defaultdict
 
 from py65.devices.mpu6502 import MPU
 
-from build import build
+from build import build, labels_for, shareable_wanted
 import nes as N
 from screenshot import play
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LABELS = os.path.join(ROOT, "build", "haunted_house.labels")
 HEADER = 16
 PRG_START, PRG_SIZE = 0x8000, 0x10000
 BANK = 0x2000                # the MMC3's 8K program banks
@@ -74,9 +73,9 @@ class Memory:
         return 0x10000
 
 
-def labels() -> dict[int, str]:
+def labels(rom_path: str) -> dict[int, str]:
     found: dict[int, str] = {}
-    with open(LABELS) as label_file:
+    with open(labels_for(rom_path)) as label_file:
         for line in label_file:
             _kind, address, name = line.split()
             found.setdefault(int(address, 16), name.lstrip("."))
@@ -104,12 +103,12 @@ def run_routine(mpu: MPU, address: int, names: dict[int, str]) -> dict[str, int]
 
 
 def main() -> None:
-    rom_path = build()
+    rom_path = build(shareable=shareable_wanted(sys.argv))
     machine = N.Nes(rom_path)
     play(machine, sys.argv[1:])
     with open(rom_path, "rb") as rom_file:
         program = rom_file.read()[HEADER:HEADER + PRG_SIZE]
-    names = labels()
+    names = labels(rom_path)
     addresses = {name: address for address, name in names.items()}
     mpu = MPU(memory=Memory(bytes(machine.ram), program))  # type: ignore[arg-type]
     mpu.sp = 0xF0

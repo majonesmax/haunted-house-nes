@@ -12,7 +12,7 @@ import sys
 import numpy as np
 from PIL import Image
 
-from build import build
+from build import build, shareable_wanted
 import nes as N
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,8 +30,9 @@ def play(machine: N.Nes, steps: list[str]) -> None:
 
 
 def main() -> None:
+    shareable = shareable_wanted(sys.argv)
     name, steps = sys.argv[1], sys.argv[2:]
-    machine = N.Nes(build())
+    machine = N.Nes(build(shareable=shareable))
     play(machine, steps)
     if machine.picture is None:
         sys.exit("no picture yet")

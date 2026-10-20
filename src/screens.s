@@ -13,8 +13,8 @@ SCREEN_GAME_OVER = 2
 SCREEN_ENDING = 3
 SCREEN_HELP = 4
 SCREEN_STORY = 5
-TITLE_TILES_BANK = 20     ; 1K banks: the title's tile set, then the ending's
-ENDING_TILES_BANK = 24
+TITLE_TILES_BANK = SPRITE_TILES_BANK + 4   ; 1K banks: the title's tile set, then the ending's
+ENDING_TILES_BANK = TITLE_TILES_BANK + 4
 WORD_SLOTS = 11
 FULL_ROWS_PER_FRAME = 6
 STRING_END = $FF
@@ -133,11 +133,15 @@ use_extras:
     sta BANK_DATA
     rts
 
+; The floor's maps bank (floor_banks: four floors to a bank).
 use_maps:
     lda #PROGRAM_BANK_8000
     sta bank_select
     sta BANK_SELECT
-    lda #MAPS_BANK
+    stx maps_kept_x
+    ldx floor
+    lda floor_banks, x
+    ldx maps_kept_x
     sta BANK_DATA
     rts
 

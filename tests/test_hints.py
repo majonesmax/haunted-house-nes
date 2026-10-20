@@ -8,7 +8,9 @@ The scenes are set up by writing the game's RAM, as the remaster's research lab 
 
 Needs the remaster beside this repository (../haunted-house) with your ROM in it.
 
-Usage: python tests/test_hints.py [scenes] [seed]      (exit code 1 on any difference)
+With --shareable, the shareable build, against the remaster's hints on our own mansion.
+
+Usage: python tests/test_hints.py [--shareable] [scenes] [seed]      (exit code 1 on any difference)
 """
 
 import os
@@ -20,14 +22,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMASTER = os.path.join(os.path.dirname(ROOT), "haunted-house")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, REMASTER)
-from build import build  # noqa: E402
+from build import build, labels_for, shareable_wanted  # noqa: E402
+import shareable  # noqa: E402
 from nes import BUTTON_A, BUTTON_B, BUTTON_START, Nes  # noqa: E402
 
 from game import hints  # noqa: E402
+from game import rom as R  # noqa: E402
 from game.state import Game, GameState  # noqa: E402
 
-LABELS = os.path.join(ROOT, "build", "haunted_house.labels")
-FONT = os.path.join(ROOT, "build", "art", "font.inc")
+FONT = os.path.join(ROOT, "build", "faithful", "art", "font.inc")
 HEADER, BANK = 16, 0x2000
 EXTRAS_BANK = 2
 STATE_START = 0x80
@@ -42,9 +45,9 @@ SETTLE_FRAMES = 20          # a new floor is drawn before the hint can show
 PAIRS = {5: (2, 3), 6: (2, 4), 7: (3, 4)}   # a two-piece shape: the pieces in it
 
 
-def labels() -> dict[str, int]:
+def labels(rom_path: str) -> dict[str, int]:
     found = {}
-    with open(LABELS) as label_file:
+    with open(labels_for(rom_path)) as label_file:
         for line in label_file:
             _kind, address, name = line.split()
             found[name.lstrip(".")] = int(address, 16)
@@ -65,7 +68,7 @@ class HintReader:
 
     def __init__(self, nes: Nes, rom_path: str):
         self.nes = nes
-        self.at = labels()
+        self.at = labels(rom_path)
         with open(rom_path, "rb") as rom_file:
             start = HEADER + EXTRAS_BANK * BANK
             self.extras = rom_file.read()[start:start + BANK]
@@ -125,13 +128,13 @@ def held_choice(chance: random.Random, shapes: list[int]) -> int:
     return chance.choice(choices)
 
 
-def place_scene(nes: Nes, chance: random.Random) -> None:
+def place_scene(nes: Nes, chance: random.Random, floors: int) -> None:
     ram = nes.ram
     shapes = random_urn(chance)
     for index, shape in enumerate(shapes):
         ram[URN_SHAPES + index] = shape
     for item in range(5):
-        ram[ITEM_FLOOR + item] = chance.randrange(4)
+        ram[ITEM_FLOOR + item] = chance.randrange(floors)
         ram[ITEM_X + item] = chance.randrange(4, 149)
         ram[ITEM_Y + item] = chance.randrange(1, 252)
     ram[CARRIED] = held_choice(chance, shapes)
@@ -147,9 +150,10 @@ def check_hints(nes: Nes, reader: HintReader, game: Game, scenes: int, chance: r
     differences = 0
     compared = 0
     for _scene in range(scenes):
-        nes.ram[FLOOR] = chance.randrange(4)
+        floors = R.floor_count(game.rom)
+        nes.ram[FLOOR] = chance.randrange(floors)
         nes.run(SETTLE_FRAMES)
-        place_scene(nes, chance)
+        place_scene(nes, chance, floors)
         nes.run(1, {BUTTON_B})
         nes.run(1)                # the hint comes when B is let go
         state = game.state(nes.ram[STATE_START:STATE_START + 128])
@@ -167,7 +171,7 @@ def check_hints(nes: Nes, reader: HintReader, game: Game, scenes: int, chance: r
 def check_notes(nes: Nes, reader: HintReader, game: Game, scenes: int, chance: random.Random) -> int:
     differences = 0
     for _scene in range(scenes):
-        place_scene(nes, chance)
+        place_scene(nes, chance, R.floor_count(game.rom))
         nes.run(1)
         before = game.state(nes.ram[STATE_START:STATE_START + 128])
         nes.ram[reader.at["hint_timer"]] = 0
@@ -193,10 +197,11 @@ def check_notes(nes: Nes, reader: HintReader, game: Game, scenes: int, chance: r
 
 
 def main() -> None:
+    our_mansion = shareable_wanted(sys.argv)
     scenes = int(sys.argv[1]) if len(sys.argv) > 1 else 300
     seed = int(sys.argv[2]) if len(sys.argv) > 2 else 0
     chance = random.Random(seed)
-    rom_path = build()
+    rom_path = build(shareable=our_mansion)
     nes = Nes(rom_path)
     nes.run(5)
     nes.run(2, {BUTTON_B})        # past the story
@@ -206,6 +211,8 @@ def main() -> None:
     nes.run(1, {BUTTON_A})
     reader = HintReader(nes, rom_path)
     game = Game()
+    if our_mansion:
+        game.rom = shareable.floors_rom()
     differences = check_hints(nes, reader, game, scenes, chance)
     differences += check_notes(nes, reader, game, scenes, chance)
     sys.exit(1 if differences else 0)

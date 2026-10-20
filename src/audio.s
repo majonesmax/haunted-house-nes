@@ -792,5 +792,5 @@ hear_game_sounds:
     rts
 
 .segment "RODATA"
-floor_songs:    .byte SONG_FLOOR1, SONG_FLOOR2, SONG_FLOOR3, NO_SONG   ; the attic is quiet
+; (floor_songs, each floor's: tools/make_art.py, in floors.inc)
 .segment "CODE"

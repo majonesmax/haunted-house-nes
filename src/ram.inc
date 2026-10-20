@@ -203,6 +203,7 @@ sprites_to:     .res 1
 ; mansion.s and its users
 .segment "BSS"
 kept_x:         .res 1
+maps_kept_x:    .res 1
 door_direction: .res 1
 crossings_start: .res 1   ; this floor's part of doorway_lines
 stairs_going:   .res 1

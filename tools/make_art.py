@@ -1,21 +1,25 @@
 """The picture's tiles, made from the remaster's NES look: each floor drawn by the remaster's own scenery code
 with its classic pack, cut down to three NES colours plus black (docs/plan.md, "The picture"), split into
-8x8 tiles; and the remaster's NES font. The faithful build's floors carry the original's wall plan, so all
-of this goes in build/ and is never committed.
+8x8 tiles; and the remaster's NES font. The faithful build's floors carry the original's wall plan, so its
+art is never committed; the shareable build's floors are our own (mansion/floors.txt), drawn with the pack
+tools/mansion_pack.py makes.
 
-Makes:
-  build/art/tiles.chr   the cartridge's tile memory (CHR): per floor a 4K set (font, then the floor's
-                        tiles), then the sprites' 4K
-  build/art/art.inc     each floor's map (the tile on every 8x8 of its 240 x 512 picture), its colours, and
-                        the light's shape
-  build/art/font.inc    the font's character map, so text in the code is written as text
-  build/art/sprites.inc the cast: each picture as 8x16 pieces, and each kind's three colours
+Makes, in build/faithful/art or build/shareable/art:
+  tiles.chr     the cartridge's tile memory (CHR): per floor a 4K set (font, then the floor's tiles), then
+                the sprites' 4K, the title's and the ending's
+  art.inc       the maps' banks: each starts with the floors' colours and names and the light's shape, then
+                the maps (the tile on every 8x8 of a floor's 240 x 512 picture) of its four floors
+  floors.inc    by floor: where its map, colours and name are, its maps bank, its song
+  font.inc      the font's character map, so text in the code is written as text
+  sprites.inc   the cast: each picture as 8x16 pieces, and each kind's three colours
+  screens.inc   the full screens
 
-Usage: python tools/make_art.py
+Usage: python tools/make_art.py [--shareable]
 """
 
 import os
 import sys
+from typing import NamedTuple
 
 import numpy as np
 
@@ -27,17 +31,25 @@ from game import rom as R  # noqa: E402
 from game import guide  # noqa: E402
 from looks.nes import look as NL  # noqa: E402
 from shared import hud  # noqa: E402
+import content  # noqa: E402
+import mansion as M  # noqa: E402
+import mansion_pack  # noqa: E402
+import rom_image as I  # noqa: E402
 import screens  # noqa: E402
 from shared import palettes as PAL  # noqa: E402
 
-OUTPUT = os.path.join(ROOT, "build", "art")
-FLOORS = 4
+FAITHFUL_FLOORS = 4
 TILE = 8
 TILES_PER_SET = 256
 FONT_TILES = 160           # tiles 0-159 of each set: the font (white, then grey) and the status band's pieces
 FONT_ORDER = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!.,-:'?<>/"
 SET_BYTES = TILES_PER_SET * 16
-CHR_BYTES = 32 * 1024      # four floor sets and the sprites' set, rounded up to a size the cartridge can be
+CHR_BYTES = 64 * 1024      # up to eight floor sets, the sprites' set, the title's and the ending's
+MAPS_SEGMENTS = ("MAPS", "MAPS_2")   # the floors' maps: four to a bank (src/mmc3.cfg)...
+MAPS_BANKS = (0, 3)                  # ...in program banks 0 and 3
+FLOORS_PER_BANK = 4
+# each floor's song, by the classic floor its pictures are (mansion_pack.STYLES): the attic is quiet
+STYLE_SONGS = {1: "SONG_FLOOR1", 2: "SONG_FLOOR2", 3: "SONG_FLOOR3", 4: "NO_SONG"}
 BLACK = 0x0F
 COLOURS = 3
 KMEANS_ROUNDS = 25
@@ -408,8 +420,6 @@ def byte_lines(data: list[int], per_line: int = 30) -> list[str]:
             for start in range(0, len(data), per_line)]
 
 
-SCREEN_SETS_FROM = 5       # the title's tile set, then the ending's, after the floors' four and the sprites'
-
 
 def screen_sets(look: "looks.FloorLook") -> tuple[bytes, list[str]]:
     """The title's and the ending's tile sets, and their nametables, attributes and colours."""
@@ -481,42 +491,110 @@ def text_lines() -> list[str]:
     return lines
 
 
-def main() -> None:
-    look = looks.make("nes", R.load())
-    font, status_names = status_tiles(look)
-    chr_data = bytearray()
-    lines = ["; Made by tools/make_art.py from the remaster's NES look. Never commit this file.", "",
-             f"FONT_TILES = {FONT_TILES}"] + status_names + [""]
-    for floor in range(FLOORS):
+class FloorArt(NamedTuple):
+    """One floor's pictures, made: its tile map, its colours, its name."""
+    tile_map: list[int]
+    tiles: list[bytes]
+    colours: list[int]
+    name: str
+
+
+def floor_looks(shareable: bool) -> tuple[list["looks.FloorLook"], list[str]]:
+    """The look that draws each floor, and the floors' names. The faithful build's floors share one plan, so
+    one look draws them all; the shareable build's each have a look of their own, reading a stand-in ROM
+    (tools/rom_image.py) with that floor's plan, and the pack tools/mansion_pack.py makes."""
+    if not shareable:
+        look = looks.make("nes", R.load())
+        names = look.pack.info.get("floors", [f"FLOOR {number + 1}" for number in range(FAITHFUL_FLOORS)])
+        return [look] * FAITHFUL_FLOORS, names
+    mansion_pack.main()
+    with open(mansion_pack.MANSION_TEXT) as mansion_file:
+        floors = M.parse(mansion_file.read())
+    per_floor = [M.floor_tables(floor) for floor in floors]
+    tables = {label: b"".join(made[label] for made in per_floor) for label in per_floor[0]}
+    pack = content.Pack(mansion_pack.OUTPUT, bytes(I.IMAGE_SIZE))
+    images = [I.floor_image(tables, number, [], bytes(I.RANDOM_BYTES // 8)) for number in range(len(floors))]
+    return [looks.LOOKS["nes"](pack, image) for image in images], [floor.name for floor in floors]
+
+
+def floor_art(floor_set: list["looks.FloorLook"], names: list[str]) -> list[FloorArt]:
+    made = []
+    for floor, (look, name) in enumerate(zip(floor_set, names)):
         picture = look.scene(floor).full
         codes = three_colours(picture)
         tiles, tile_map = floor_tiles(to_indices(picture, codes))
-        chr_data += b"".join(font + tiles).ljust(SET_BYTES, b"\0")
-        lines += [f"floor{floor + 1}_map:   ; {len(tiles)} tiles"] + byte_lines(tile_map)
-        lines += [f"floor{floor + 1}_colours:   ; lit, dim, lightning"] + byte_lines(palettes(codes), 9)
+        made.append(FloorArt(tile_map, tiles, palettes(codes), name.upper()))
+    return made
+
+
+def shared_block(floors: list[FloorArt], labelled: bool) -> list[str]:
+    """What every maps bank starts with, at the same places in each, so it reads the same whichever floor's
+    bank is in: the floors' colours and names, and the light's shape. Labelled in the first bank only."""
+    lines = []
+    for number, floor in enumerate(floors):
+        label = f"floor{number + 1}_colours:" if labelled else ";"
+        lines += [f"{label}   ; lit, dim, lightning"] + byte_lines(floor.colours, 9)
+    for number, floor in enumerate(floors):
+        label = f"floor{number + 1}_name:" if labelled else ""
+        lines += [f'{label} .byte "{floor.name}", $FF']   # (0 is a space)
+    label = "light_levels:" if labelled else ";"
+    lines += [f"{label}   ; by (down, across) from the eyes, 4 px steps: 2 lit, 1 dim, 0 unlit"]
+    return lines + byte_lines(light_table(), LIGHT_STEPS)
+
+
+def maps_banks(floors: list[FloorArt]) -> list[str]:
+    """The maps' banks (MAPS_SEGMENTS): each starts with the shared block, then the maps of its floors."""
+    lines = []
+    for bank, segment in enumerate(MAPS_SEGMENTS):
+        first = bank * FLOORS_PER_BANK
+        if first >= len(floors):
+            break
+        lines += [f'.segment "{segment}"'] + shared_block(floors, bank == 0)
+        for number in range(first, min(first + FLOORS_PER_BANK, len(floors))):
+            floor = floors[number]
+            lines += [f"floor{number + 1}_map:   ; {len(floor.tiles)} tiles"] + byte_lines(floor.tile_map)
+    return lines
+
+
+def floors_include(floors: list[FloorArt], songs: list[str]) -> list[str]:
+    """The fixed bank's per-floor tables: where each floor's map, colours and name are, its maps bank, its
+    song."""
+    numbers = range(1, len(floors) + 1)
+    return ["; Made by tools/make_art.py: each floor's art and song, by floor.",
+            "floor_maps:   .word " + ", ".join(f"floor{number}_map" for number in numbers),
+            "floor_colours: .word " + ", ".join(f"floor{number}_colours" for number in numbers),
+            "floor_names:  .word " + ", ".join(f"floor{number}_name" for number in numbers),
+            "floor_banks:  .byte " + ", ".join(str(MAPS_BANKS[(number - 1) // FLOORS_PER_BANK])
+                                                for number in numbers),
+            "floor_songs:  .byte " + ", ".join(songs)]
+
+
+def main() -> None:
+    shareable = "--shareable" in sys.argv
+    output = os.path.join(ROOT, "build", "shareable" if shareable else "faithful", "art")
+    floor_set, names = floor_looks(shareable)
+    look = floor_set[0]
+    font, status_names = status_tiles(look)
+    floors = floor_art(floor_set, names)
+    chr_data = b"".join(b"".join(font + floor.tiles).ljust(SET_BYTES, b"\0") for floor in floors)
+    lines = ["; Made by tools/make_art.py from the remaster's NES look. Never commit this file.", "",
+             f"FONT_TILES = {FONT_TILES}"] + status_names + [""] + maps_banks(floors)
     sprites = SpriteTiles()
     sprite_lines = sprite_include(look, sprites)
     chr_data += b"".join(sprites.pairs).ljust(SET_BYTES, b"\0")
     screen_chr, screen_lines = screen_sets(look)
     chr_data += screen_chr
-    names = look.pack.info.get("floors", [f"FLOOR {number + 1}" for number in range(FLOORS)])
-    for floor, name in enumerate(names):
-        lines += [f'floor{floor + 1}_name: .byte "{name.upper()}", $FF']   # (0 is a space)
-    lines += ["light_levels:   ; by (down, across) from the eyes, 4 px steps: 2 lit, 1 dim, 0 unlit"]
-    lines += byte_lines(light_table(), LIGHT_STEPS)
-    os.makedirs(OUTPUT, exist_ok=True)
-    with open(os.path.join(OUTPUT, "tiles.chr"), "wb") as chr_file:
+    styles = list(mansion_pack.STYLES.values()) if shareable else list(range(1, FAITHFUL_FLOORS + 1))
+    songs = [STYLE_SONGS[style] for style in styles]
+    os.makedirs(output, exist_ok=True)
+    with open(os.path.join(output, "tiles.chr"), "wb") as chr_file:
         chr_file.write(bytes(chr_data).ljust(CHR_BYTES, b"\0"))
-    with open(os.path.join(OUTPUT, "art.inc"), "w") as include:
-        include.write("\n".join(lines) + "\n")
-    with open(os.path.join(OUTPUT, "font.inc"), "w") as include:
-        include.write(font_map())
-    with open(os.path.join(OUTPUT, "screens.inc"), "w") as include:
-        include.write("\n".join(screen_lines) + "\n")
-    with open(os.path.join(OUTPUT, "sprites.inc"), "w") as include:
-        include.write("\n".join(sprite_lines) + "\n")
+    for file_name, text in (("art.inc", lines), ("font.inc", [font_map()]), ("screens.inc", screen_lines),
+                            ("sprites.inc", sprite_lines), ("floors.inc", floors_include(floors, songs))):
+        with open(os.path.join(output, file_name), "w") as include:
+            include.write("\n".join(text) + "\n")
     print(f"{len(sprites.pairs)} sprite tile pairs of {SPRITE_PAIRS}")
-    print(OUTPUT)
+    print(output)
 
 
 if __name__ == "__main__":

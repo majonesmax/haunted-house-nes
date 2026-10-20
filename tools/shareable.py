@@ -28,6 +28,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, E.REMASTER)
 import looks  # noqa: E402
 
+from game import rom as R  # noqa: E402
+
 
 MANSION_TEXT = os.path.join(ROOT, "mansion", "floors.txt")
 OUTPUT = os.path.join(ROOT, "build", "shareable", "mansion.inc")
@@ -60,6 +62,8 @@ MONSTER_FRAMES = [0, 20, 40, 40, 40]    # each monster's two pictures in the pag
 EFFECT_FOR_SOUND = {2: "locked", 3: "bump", 4: "door_open", 5: "drop", 6: "pickup_scepter", 7: "urn_join",
                     8: "door_close", 9: "stairs_up", 10: "stairs_down", 11: "urn_whole"}
 SOUNDS = 12
+BY_GAME_LABELS = {"LOCKED_DOORS": "locked_doors", "STAIRS_HERE": "stairs_here",   # the model's names: ours
+                  "STAIRS_GO_UP": "stairs_go_up"}
 
 
 # --- shapes from our pictures ---------------------------------------------------------------------------
@@ -150,10 +154,27 @@ def all_tables(floors: list[M.Floor], look: "looks.FloorLook") -> dict[str, tupl
     return {label: (made[label], what) for label, _address, _length, what in E.TABLES}
 
 
-def main() -> None:
+def read_floors() -> list[M.Floor]:
     with open(MANSION_TEXT) as mansion_file:
-        floors = M.parse(mansion_file.read())
-    look = looks.make("nes", bytes(I.IMAGE_SIZE))   # (the cast's pictures need nothing from a ROM)
+        return M.parse(mansion_file.read())
+
+
+def cast_look() -> "looks.FloorLook":
+    return looks.make("nes", bytes(I.IMAGE_SIZE))   # (the cast's pictures need nothing from a ROM)
+
+
+def floors_rom() -> R.Floors:
+    """The mansion as the remaster's model reads it, in place of the ROM: tests/verify_engine.py --shareable
+    runs the model on it beside the NES."""
+    floors, look = read_floors(), cast_look()
+    tables = {label: data for label, (data, _what) in all_tables(floors, look).items()}
+    images = [I.floor_image(tables, number, eyes_bytes(look), random_bits()) for number in range(len(floors))]
+    by_game = {name: tables[label] for name, label in BY_GAME_LABELS.items()}
+    return R.Floors(images, by_game)
+
+
+def main() -> None:
+    floors, look = read_floors(), cast_look()
     constants = E.CONSTANTS + [("GHOST_START_FLOOR", len(floors) - 1), ("FLOOR_COUNT", len(floors))]
     text = E.include_text(HEADER, constants, all_tables(floors, look), eyes_bytes(look), random_bits())
     os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
