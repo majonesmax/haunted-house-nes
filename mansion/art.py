@@ -2,12 +2,11 @@
 manor (its packs/classic/source/manor.py - whose motifs and helpers this uses), a floor of the house per
 floor of the game. tools/mansion_pack.py turns it into PNGs in build/, for the remaster's look to draw.
 
+    B  The Cellar      rough stone walls; flagstones; wine racks and barrels
     1  The Foyer       the classic foyer: blue damask over a wood wainscot; black and white marble
     2  The Gallery     plum lozenge paper; polished boards; portraits whose eyes follow you, landscapes
-    3  The Library     the classic dining hall's red stripes and parquet, its bookshelves and portraits
-    4  The Bedrooms    pale pink paper with small blue flowers; a patterned red carpet; mirrors, candles
-    5  The Nursery     pink and cream stripes with stars; big yellow and blue checks; a clock, toy blocks
-    6  The Attic       the classic attic: bare planks, rough boards, cobwebs and crates
+    3  The Bedrooms    pale pink paper with small blue flowers; a patterned red carpet; mirrors, candles
+    4  The Attic       the classic attic: bare planks, rough boards, cobwebs and crates
 
 Each floor ends up in four NES colours and black (tools/floor_colours.py: the walls' two and the floor's two),
 so each keeps to about that, and draws its fine detail - mortar, seams, grout - in black, which is free
@@ -26,6 +25,45 @@ import manor  # noqa: E402
 from shared.pixelart import from_ascii  # noqa: E402
 
 Pictures = manor.Pictures
+
+# --- B: the cellar -------------------------------------------------------------------------------------
+ROUGH_STONE = """
+SSSSSKSSSSSK
+SsSSSKSSSsSK
+KKKKKKKKKKKK
+SSKSSSSSKSSS
+SSKSsSSSKSSS
+KKKKKKKKKKKK
+"""
+FLAGSTONES = """
+fffffffffffK
+fffefffffffK
+fffffffffffK
+KKKKKKKKKKKK
+fffffKffffff
+fffffKfffeff
+fffffKffffff
+KKKKKKKKKKKK
+"""
+WINE_RACK = """
+DDDDDDDDDD
+DgGDgGDgGD
+DDDDDDDDDD
+DgGDgGDgGD
+DDDDDDDDDD
+DgGDgGDgGD
+DDDDDDDDDD
+"""
+BARREL = """
+..DDDDDD..
+.DwwwwwwD.
+DDDDDDDDDD
+DwwwwwwwwD
+DwwwwwwwwD
+DDDDDDDDDD
+.DwwwwwwD.
+..DDDDDD..
+"""
 
 # --- 2: the gallery ------------------------------------------------------------------------------------
 LOZENGE = """
@@ -97,73 +135,15 @@ CANDLE = """
 .GGGGG..
 """
 
-# --- 5: the nursery ------------------------------------------------------------------------------------
-NURSERY_STRIPES = """
-ppppcccc
-ppppcccc
-ppppcycc
-ppppcccc
-ppppcccc
-ppppcccc
-"""
-CHECKS = """
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-yyyyyyyyyyyyBBBBBBBBBBBB
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-BBBBBBBBBBBByyyyyyyyyyyy
-"""
-CLOCK = """
-...DDDD...
-..DwwwwD..
-.DwWWWWwD.
-.DwWKWWwD.
-.DwWWKWwD.
-.DwWWWWwD.
-..DwwwwD..
-...DDDD...
-....D.....
-....G.....
-"""
-BLOCKS = """
-DDDDDDDDDD
-DrrDbbDyyD
-DrRDbBDyYD
-DrrDbbDyyD
-DDDDDDDDDD
-DyyDrrDbbD
-DyYDrRDbBD
-DyyDrrDbbD
-DDDDDDDDDD
-"""
-
+CELLAR = {
+    "paper": (ROUGH_STONE, {"S": 0x00, "s": 0x10, "K": 0x0F}),
+    "wainscot": (ROUGH_STONE, {"S": 0x00, "s": 0x10, "K": 0x0F}),
+    "floor": ("motif", FLAGSTONES, {"f": 0x17, "e": 0x07, "K": 0x0F}),
+    "top": (manor.MASONRY, {"n": 0x00, "m": 0x0F}),
+    "trim": 0x10,
+    "decor": [{"kind": "wine_rack", "art": WINE_RACK, "colours": {"D": 0x07, "g": 0x0A, "G": 0x1A}},
+              {"kind": "barrel", "art": BARREL, "colours": {"D": 0x07, "w": 0x17}}],
+}
 GALLERY = {
     "paper": (LOZENGE, {"P": 0x04, "p": 0x14}),
     "floor": ("motif", BOARDS, {"w": 0x17, "D": 0x0F, "h": 0x27}),
@@ -184,16 +164,6 @@ BEDROOMS = {
                                             for flame in manor.SCONCE_FLAMES],
                "colours": {"F": 0x28, "y": 0x30, "W": 0x30, "G": 0x27}}],
 }
-NURSERY = {
-    "paper": (NURSERY_STRIPES, {"p": 0x25, "c": 0x37, "y": 0x28}),
-    "floor": ("motif", CHECKS, {"y": 0x28, "B": 0x21}),
-    "top": (manor.MASONRY, {"n": 0x15, "m": 0x0F}),
-    "trim": 0x25,
-    "decor": [{"kind": "clock", "art": CLOCK, "colours": {"D": 0x07, "w": 0x17, "W": 0x30, "K": 0x0F,
-                                                           "G": 0x27}},
-              {"kind": "blocks", "art": BLOCKS,
-               "colours": {"D": 0x07, "r": 0x16, "R": 0x26, "b": 0x11, "B": 0x21, "y": 0x28, "Y": 0x38}}],
-}
 def with_black_mortar(floor: dict) -> dict:
     """A classic floor with its walls' tops in one colour and black mortar (the classic pack's own two
     shades would be one colour here)."""
@@ -201,8 +171,8 @@ def with_black_mortar(floor: dict) -> dict:
     return floor | {"top": (manor.MASONRY, {"n": numbers["n"], "m": 0x0F})}
 
 
-FOYER, DINING_HALL, ATTIC = (with_black_mortar(manor.FLOORS[number]) for number in (0, 1, 3))
-FLOORS = [FOYER, GALLERY, DINING_HALL, BEDROOMS, NURSERY, ATTIC]   # the first floor first
+FOYER, ATTIC = (with_black_mortar(manor.FLOORS[number]) for number in (0, 3))
+FLOORS = [CELLAR, FOYER, GALLERY, BEDROOMS, ATTIC]   # from the bottom: the cellar, then the front door's
 SHARED = ("front_door", "title_mansion", "title_moon")   # the classic pack's, as they are
 
 

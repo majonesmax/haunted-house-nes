@@ -68,6 +68,34 @@ remaster's model of the original - every byte, every frame - so the rules are pr
 the screen or listens to the sound. The flashing, the ending's first frame in the wrong colours, and every
 game being the same game (the random numbers' seed) were all found by playing it.
 
+## 2026-10-20: A cellar and four floors, not six
+
+**Chose:** the Cellar, the Foyer (with the front door), the Gallery, the Bedrooms and the Attic. The
+Library and the Nursery went.
+
+**Why:** six storeys felt like an apartment building, not a house; a cellar below the ground floor feels
+like a haunted house.
+
+**Cost:** the original starts every game on its bottom floor, where its front door is. With a cellar below,
+the front door's floor has to be the mansion's to say (`front door on floor 2` in `mansion/floors.txt`): the
+engine puts a new game there, and so does the remaster's model (its `Floors.ground_floor`; for the real
+ROM it's 0, so nothing there changed, and its proofs against the 2600 are still exact). The status band
+counts floors from the front door's: the cellar shows as B. Every floor's stairs and locks were planned
+again, and pass the checker. The fixed code bank is nearly full now (about 230 bytes): new code should
+move the mansion's tables out to a bank first.
+
+Replaces six of "more floors, each with its own plan" below - the "each with its own plan" stays.
+
+## 2026-10-20: The name: Haunted House: By Matchlight
+
+**Chose:** *Haunted House: By Matchlight* - the logo stays HAUNTED HOUSE, with BY MATCHLIGHT under it.
+
+**Why:** the shareable ROM is its own game on the original's rules, and should say so; the match - a
+small circle of light in a dark house - is how it plays. It also fits an SNES version later.
+
+**What else:** plain *Haunted House* (Atari's game's name, used for an unofficial ROM); *Six Floors*, *After
+Dark*, *The Urn*; a name of its own (*Matchlight*), which would avoid leading with Atari's title at all.
+
 ## 2026-10-20: The floors' colours: a palette for walls and one for floors (option 2)
 
 **Chose:** each floor gets two lit palettes - one for walls, one for floors - and each 16 x 16 block of the
@@ -118,6 +146,8 @@ RAM each frame. Now the time the player takes to press Start decides the game.
 whose RAM came up the same.
 
 ## 2026-10-20: The shareable mansion: more floors, each with its own plan
+
+(Six floors became a cellar and four: see above.)
 
 **Chose:** six floors, each with its own walls, doors, locks and stairs, in the original's floor size and
 2 x 3 rooms. The engine reads every mansion table floor by floor; the faithful build gives each floor the

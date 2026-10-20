@@ -75,6 +75,8 @@ start_new_game:
     inx
     cpx #10
     bne @copy
+    lda #FRONT_DOOR_FLOOR ; on the floor with the front door (cleared to 0 above: the original's is 0; a
+    sta floor             ; mansion with a cellar has its front door higher)
     jsr scatter
     lda #GHOST_START_FLOOR
     sta monster_floor + GHOST

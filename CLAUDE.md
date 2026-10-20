@@ -1,4 +1,4 @@
-# Working on Haunted House for the NES with an AI assistant
+# Working on Haunted House: By Matchlight (the NES game) with an AI assistant
 
 Notes for Claude Code (or any coding assistant); for people, a quick tour. The plan and its steps:
 [docs/plan.md](docs/plan.md).

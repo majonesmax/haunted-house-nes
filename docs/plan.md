@@ -76,7 +76,7 @@ difficulty switch (lightning on or off) becomes a setting on the title screen.
    band under the view (`src/hints.s`; `tests/test_hints.py` checks their words against the remaster's
    game/hints.py). B with Select is the lights-on cheat (`src/cheat.s`): while B is held, Select is never the
    game's. Lightning is in the picture and the sound. Possible later: "YOU ESCAPED!" at the door.
-7. **The new mansion** - done: six floors, each with its own plan, walls, doors, locks and stairs
+7. **The new mansion** - done: a cellar and four floors, each with its own plan, walls, doors, locks and stairs
    (games 1-8, and game 9's), drawn as text in `mansion/floors.txt` (chosen 2026-10-20 over more floors on
    one plan, or bigger floors). The pieces:
    - the engine reads every mansion table floor by floor (`src/mansion.s`); the faithful build gives each

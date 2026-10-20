@@ -78,5 +78,5 @@ jobs:
           cp build/shareable/haunted_house.nes haunted_house.nes
           sha256sum haunted_house.nes > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" haunted_house.nes SHA256SUMS.txt \
-            --title "Haunted House for the NES $GITHUB_REF_NAME" \
+            --title "Haunted House: By Matchlight $GITHUB_REF_NAME" \
             --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"

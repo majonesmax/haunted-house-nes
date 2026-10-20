@@ -17,8 +17,9 @@ import mansion as M  # noqa: E402
 BREAKAGES = [
     ("a wall on a monster's way", "#1@11++@0#\n#1111##00#\n##1####0##",
      "#1@11++@0#\n#1111###0#\n##1####0##", "goes into a wall"),
-    ("stairs that meet nothing", "stairs 0 up, 3 up, 5 up", "stairs 3 up, 5 up", "don't meet stairs"),
-    ("a room shut away", "locked 2-4, 3-5", "locked 2-4, 3-5, 4-5", "can't be reached"),
+    ("stairs that meet nothing", "stairs 1 up, 4 up", "stairs 4 up", "don't meet stairs"),
+    ("a room shut away", "locked 2-3\ngame 9 stairs 3 down", "locked 2-3, 0-2, 2-4\ngame 9 stairs 3 down",
+     "can't be reached"),
     ("a doorway into a wall", "##+####+##\n#1111##00#\n#1@11", "##+####+##\n#1111###0#\n#1@11",
      "doesn't open into room 0"),
     ("the start in a wall", "33@33++@22", "33@33++@#2", "player's start"),
@@ -27,7 +28,7 @@ BREAKAGES = [
 
 def problems_in(text: str) -> list[str]:
     try:
-        return C.Checker(M.parse(text)).run()
+        return C.Checker(M.parse(text), M.front_door_floor(text)).run()
     except M.MansionError as error:
         return [str(error)]
 

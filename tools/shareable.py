@@ -161,6 +161,20 @@ def read_floors() -> list[M.Floor]:
         return M.parse(mansion_file.read())
 
 
+def front_door_floor() -> int:
+    """The floor with the front door, where a new game starts (the cellar is below it)."""
+    with open(MANSION_TEXT) as mansion_file:
+        return M.front_door_floor(mansion_file.read())
+
+
+def constants(floors: list[M.Floor]) -> list[tuple[str, int]]:
+    """The faithful build's, but for the mansion's own: its floors, the top one (the ghost's), and the front
+    door's (where a new game starts, and game 3's master key with it)."""
+    ours = {"FRONT_DOOR_FLOOR": front_door_floor(), "GAME_3_KEY_FLOOR": front_door_floor()}
+    made = [(name, ours.get(name, value)) for name, value in E.CONSTANTS]
+    return made + [("GHOST_START_FLOOR", len(floors) - 1), ("FLOOR_COUNT", len(floors))]
+
+
 def cast_look() -> "looks.FloorLook":
     return looks.make("nes", bytes(I.IMAGE_SIZE))   # (the cast's pictures need nothing from a ROM)
 
@@ -172,13 +186,13 @@ def floors_rom() -> R.Floors:
     tables = {label: data for label, (data, _what) in all_tables(floors, look).items()}
     images = [I.floor_image(tables, number, eyes_bytes(look), random_bits()) for number in range(len(floors))]
     by_game = {name: tables[label] for name, label in BY_GAME_LABELS.items()}
-    return R.Floors(images, by_game)
+    return R.Floors(images, by_game, front_door_floor())
 
 
 def main() -> None:
     floors, look = read_floors(), cast_look()
-    constants = E.CONSTANTS + [("GHOST_START_FLOOR", len(floors) - 1), ("FLOOR_COUNT", len(floors))]
-    text = E.include_text(HEADER, constants, all_tables(floors, look), eyes_bytes(look), random_bits())
+    tables = all_tables(floors, look)
+    text = E.include_text(HEADER, constants(floors), tables, eyes_bytes(look), random_bits())
     os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
     with open(OUTPUT, "w") as include:
         include.write(text)

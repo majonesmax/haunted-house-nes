@@ -1,7 +1,7 @@
-# Haunted House for the NES
+# Haunted House: By Matchlight
 
 A native NES game of the Atari 2600 *Haunted House* (1982): the same game, rule for rule, in a new and bigger
-mansion of six floors, drawn the way the [Haunted House remaster](https://github.com/majonesmax/haunted-house-remastered)'s
+mansion - a cellar and four floors - drawn the way the [Haunted House remaster](https://github.com/majonesmax/haunted-house-remastered)'s
 NES look draws it. It runs on any NES emulator, or a real NES with an MMC3 cartridge.
 
 **Download** the ROM from the [releases](../../releases): `haunted_house.nes`.
@@ -21,8 +21,9 @@ original has them.
 | B | on the title, the help; in play, a hint: what to look for next, and which way |
 | B + Select | the lights-on cheat: every room lit, everything on the floor shown |
 
-The house: the Foyer, the Gallery, the Library, the Bedrooms, the Nursery and the Attic - each floor with its
-own rooms, doors, locks and stairs, and in game 9, other stairs and locks again.
+The house: the Cellar, the Foyer (with the front door), the Gallery, the Bedrooms and the Attic - each floor
+with its own rooms, doors, locks and stairs, and in game 9, other stairs and locks again. The status band
+shows the Cellar as floor B.
 
 ## How it's made
 

@@ -10,7 +10,7 @@ songs (`mansion/music.json`). The shareable ROM also carries art and music from 
 the classic floors, the title's mansion and moon, its soundtrack and effects - which are CC BY 4.0 there too
 (credit: "Haunted House remaster contributors").
 
-Credit: "Haunted House for the NES contributors".
+Credit: "Haunted House: By Matchlight contributors".
 
 The code is MIT-licensed (see `LICENSE`).
 

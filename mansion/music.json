@@ -1,7 +1,21 @@
 {
-  "_about": "The shareable build's own songs, in the remaster's song format (its music/chiptune.py: melody tokens are eighth notes, 8 a bar), added to the classic soundtrack by tools/make_music.py; and which song each floor plays, the first floor first (null: none - the attic is the quiet floor). The faithful build plays the classic floors' songs.",
-  "floor_songs": ["floor1", "gallery", "floor2", "bedrooms", "nursery", null],
+  "_about": "The shareable build's own songs, in the remaster's song format (its music/chiptune.py: melody tokens are eighth notes, 8 a bar), added to the classic soundtrack by tools/make_music.py; and which song each floor plays, the cellar first (null: none - the attic is the quiet floor). The faithful build plays the classic floors' songs.",
+  "floor_songs": [
+    "cellar",
+    "floor1",
+    "gallery",
+    "bedrooms",
+    null
+  ],
   "songs": {
+    "cellar": {
+      "bpm": 72,
+      "style": "creep",
+      "loop": true,
+      "drums": "k...............",
+      "chords": "Em F Em F Am G F E Em F Em F Am F E E",
+      "melody": "E4 - - - F4 - - - | E4 - - - . . . . | B3 - C4 - B3 - A3 - | B3 - - - . . . . | E4 - G4 - F4 - E4 - | D4 - - - C4 - - - | B3 - C4 - D4 - F4 - | E4 - - - . . . . | G4 - - - F4 - - - | E4 - F4 - G4 - - - | A4 - - - G4 - F4 - | E4 - - - . . . . | C4 - - - B3 - A3 - | F4 - - - E4 - D4 - | E4 - - - F4 - E4 - | E4 - - - . . . ."
+    },
     "gallery": {
       "bpm": 92,
       "style": "organ",
@@ -17,14 +31,6 @@
       "drums": "",
       "chords": "Cm Ab Fm G Cm Ab Fm G Eb Bb Cm G Ab Fm G Cm",
       "melody": "G4 - - - Eb5 - D5 - | C5 - - - Ab4 - - - | F4 - Ab4 - C5 - Bb4 - | B4 - - - D5 - - - | G5 - - - Eb5 - D5 - | C5 - Eb5 - Ab5 - - - | F5 - Eb5 - D5 - C5 - | B4 - - - - - . . | G4 - Bb4 - Eb5 - G5 - | F5 - - - D5 - Bb4 - | Eb5 - G5 - C6 - - - | B5 - - - G5 - D5 - | C6 - - - Ab5 - Eb5 - | F5 - Ab5 - G5 - F5 - | D5 - - - B4 - G4 - | C5 - - - - - . ."
-    },
-    "nursery": {
-      "bpm": 112,
-      "style": "broken",
-      "loop": true,
-      "drums": "h...h...h...h...",
-      "chords": "D A Bm F#m G D Em A D A Bm F#m G Gm D D",
-      "melody": "F#5 - A5 - D6 - A5 - | E5 - - - C#5 - A4 - | D5 - F#5 - B5 - F#5 - | C#5 - - - A4 - F#4 - | B4 - D5 - G5 - B5 - | A5 - F#5 - D5 - - - | G5 - E5 - B4 - E5 - | C#5 - - - - - . . | F#5 - A5 - D6 - A5 - | E6 - - - C#6 - A5 - | D6 - B5 - F#5 - D5 - | C#5 - - - F#5 - A5 - | G5 - B5 - D6 - B5 - | Bb5 - - - G5 - D5 - | F#5 - - - A5 - F#5 - | D5 - - - . . . ."
     }
   }
 }

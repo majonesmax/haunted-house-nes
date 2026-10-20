@@ -1,16 +1,40 @@
-; The shareable build's mansion: six floors of our own, on the original's rules (tools/mansion.py says how
-; to read it; tools/check_mansion.py checks it). The first floor is at the bottom of the file's list, as
-; the house is: each floor's rows are drawn top first.
+; The shareable build's mansion: a cellar and four floors of our own, on the original's rules
+; (tools/mansion.py says how to read it; tools/check_mansion.py checks it). The cellar is first, at the
+; bottom of the house, and the front door is on the floor above it; each floor's rows are drawn top first.
 ;
 ;   #  wall    0-5  a room (even on the right; 0 and 1 at the bottom)    @  a room's middle    +  a doorway
 ;
-; The outside columns are wall but for the middle row: the front door (floor 1, room 2) and the side
+; The outside columns are wall but for the middle row: the front door (the Foyer, room 2) and the side
 ; stairs. The stairs of rooms 0, 1, 4 and 5 are at their one cell at the floor's end.
 
+front door on floor 2
+
+floor THE CELLAR
+stairs 1 up, 4 up
+locked 2-4
+game 9 stairs 0 up, 3 up
+game 9 locked 0-1
+##5####4##
+#555##444#
+#555##444#
+#5@5++4@4#
+#555##444#
+##+####+##
+#333##222#
+33@3++2@22
+#333##222#
+##3####2##
+#333##222#
+##+####+##
+#111##000#
+#1@1++0@0#
+#111##000#
+##1####0##
+
 floor THE FOYER
-stairs 0 up, 3 up, 5 up
+stairs 1 down, 4 down, 0 up, 3 up, 5 up
 locked 2-4, 3-5
-game 9 stairs 1 up, 4 up
+game 9 stairs 0 down, 3 down, 1 up, 4 up
 game 9 locked 0-1, 2-3
 ##5####4##
 #5555##44#
@@ -32,7 +56,7 @@ game 9 locked 0-1, 2-3
 floor THE GALLERY
 stairs 0 down, 3 down, 5 down, 1 up, 4 up
 locked 0-2, 4-5
-game 9 stairs 1 down, 4 down, 0 up, 3 up
+game 9 stairs 1 down, 4 down, 2 up, 5 up
 game 9 locked 1-3, 2-4
 ##5####4##
 #55##4444#
@@ -51,32 +75,10 @@ game 9 locked 1-3, 2-4
 #11##0000#
 ##1####0##
 
-floor THE LIBRARY
-stairs 1 down, 4 down, 0 up, 2 up
-locked 0-1, 3-5
-game 9 stairs 0 down, 3 down, 1 up, 5 up
-game 9 locked 0-2, 4-5
-##5####4##
-#555##444#
-##55##44##
-#5@5++4@4#
-##55##44##
-#555##444#
-##+####+##
-33@3++2@22
-#333##222#
-#333##222#
-##+####+##
-#111##000#
-##1###00##
-#1@1++0@0#
-##1###00##
-##1####0##
-
 floor THE BEDROOMS
-stairs 0 down, 2 down, 1 up, 3 up, 5 up
+stairs 1 down, 4 down, 0 up, 5 up
 locked 1-3, 2-3
-game 9 stairs 1 down, 5 down, 2 up, 4 up
+game 9 stairs 2 down, 5 down, 3 up
 game 9 locked 0-1, 3-5
 ##5####4##
 #5555##44#
@@ -95,30 +97,8 @@ game 9 locked 0-1, 3-5
 #1111##00#
 ##1####0##
 
-floor THE NURSERY
-stairs 1 down, 3 down, 5 down, 0 up, 4 up
-locked 0-2, 2-3
-game 9 stairs 2 down, 4 down, 3 up
-game 9 locked 1-3, 4-5
-##5####4##
-#55##4444#
-#5@++44@4#
-#55##4444#
-##+####+##
-#33##2222#
-#33##222##
-33@++22@22
-##+####+##
-#11##0000#
-#11##0000#
-#1@++00@0#
-#11##0#00#
-#11##0000#
-#11##0000#
-##1####0##
-
 floor THE ATTIC
-stairs 0 down, 4 down
+stairs 0 down, 5 down
 locked 2-3
 game 9 stairs 3 down
 game 9 locked 0-2

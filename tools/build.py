@@ -2,7 +2,7 @@
 
   faithful    the original's mansion, read from your 2600 ROM: build/faithful/haunted_house_faithful.nes
               (never share it)
-  shareable   our own six-floor mansion (mansion/floors.txt) and rules, nothing from the ROM:
+  shareable   our own mansion, a cellar and four floors (mansion/floors.txt), and rules, nothing from the ROM:
               build/shareable/haunted_house.nes
 
 Each build's mansion, art, ROM and labels are in its own folder; the sound is shared.

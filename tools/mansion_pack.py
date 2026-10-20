@@ -1,4 +1,4 @@
-"""The shareable build's pack, for the remaster's look to draw our six floors with: build/shareable/pack. Its
+"""The shareable build's pack, for the remaster's look to draw our floors with: build/shareable/pack. Its
 world is our own text art (mansion/art.py), written out as PNGs; its cast is the remaster's classic pack's
 (the NES look's own, all original art).
 
@@ -38,8 +38,8 @@ def main() -> None:
         Image.fromarray(picture, "RGBA").save(os.path.join(world, f"{name}.png"))
     with open(os.path.join(CLASSIC, "pack.json")) as about:
         info = json.load(about)
-    info["title"], info["floors"] = "Haunted House", floor_names()
-    info["description"] = "Our own six-floor mansion (mansion/art.py), with the classic pack's cast."
+    info["title"], info["floors"] = "Haunted House: By Matchlight", floor_names()
+    info["description"] = "Our own mansion, a cellar and four floors (mansion/art.py), with the classic cast."
     with open(os.path.join(OUTPUT, "pack.json"), "w") as about:
         json.dump(info, about, indent=2)
     print(OUTPUT)

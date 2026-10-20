@@ -22,7 +22,9 @@ rooms with stairs (up or down), and the doors locked in games 3-8, then the same
   ##5####4##
   ...
 
-A door is named by the two rooms it joins. Lines starting with ; are comments.
+A door is named by the two rooms it joins. Lines starting with ; are comments. Before the floors, a line
+"front door on floor N" says which floor has the front door, where a new game starts (counting the first in
+the file as 1; without the line, the first, as in the original).
 """
 
 import re
@@ -66,10 +68,25 @@ class MansionError(ValueError):
 
 
 # --- reading the text ----------------------------------------------------------------------------------
+FRONT_DOOR_LINE = "front door on floor "
+
+
+def text_lines(text: str) -> list[str]:
+    lines = [line.rstrip() for line in text.splitlines()]
+    return [line for line in lines if line.strip() and not line.lstrip().startswith(";")]
+
+
+def front_door_floor(text: str) -> int:
+    """The floor (0 the first) with the front door, where a new game starts."""
+    for line in text_lines(text):
+        if line.startswith(FRONT_DOOR_LINE):
+            return int(line[len(FRONT_DOOR_LINE):]) - 1
+    return 0
+
+
 def parse(text: str) -> list[Floor]:
     floors: list[Floor] = []
-    lines = [line.rstrip() for line in text.splitlines()]
-    lines = [line for line in lines if line.strip() and not line.lstrip().startswith(";")]
+    lines = [line for line in text_lines(text) if not line.startswith(FRONT_DOOR_LINE)]
     index = 0
     while index < len(lines):
         if not lines[index].startswith("floor "):

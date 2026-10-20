@@ -15,7 +15,10 @@ SCREEN_HELP = 4
 SCREEN_STORY = 5
 TITLE_TILES_BANK = SPRITE_TILES_BANK + 4   ; 1K banks: the title's tile set, then the ending's
 ENDING_TILES_BANK = TITLE_TILES_BANK + 4
-WORD_SLOTS = 11
+WORD_SLOTS = 12
+SUBTITLE_SLOT = 11        ; the title's "BY MATCHLIGHT", under the logo
+SUBTITLE_ROW = 4
+GAME_ROW_ON_TITLE = 6
 FULL_ROWS_PER_FRAME = 6
 WORD_ROWS_PER_FRAME = 1
 STRING_END = $FF
@@ -636,6 +639,8 @@ queue_word_row:
 ; In: X = a slot. Out: carry set and word_row/word_tiles if this screen has it.
 compose_slot:
     stx slot
+    cpx #SUBTITLE_SLOT
+    beq subtitle_slot
     lda screen_shown
     cmp #SCREEN_ENDING
     beq @ending
@@ -651,6 +656,22 @@ compose_slot:
     jmp ending_slot
 @story:
     jmp story_slot
+
+; The game's name under the logo: the title's only (game over's logo stands alone).
+subtitle_slot:
+    lda screen_shown
+    cmp #SCREEN_TITLE
+    bne @none
+    lda #SUBTITLE_ROW
+    jsr base_row
+    lda #<subtitle_words
+    ldx #>subtitle_words
+    jsr put_centred
+    sec
+    rts
+@none:
+    clc
+    rts
 
 ; The title's (and game over's) words.
 title_slot:
@@ -689,7 +710,7 @@ title_slot:
     rts
 @not_logo:
     bne @not_game
-    lda #5                ; "GAME n", row 5
+    lda #GAME_ROW_ON_TITLE ; "GAME n" (a row clear of the subtitle above)
     jsr base_row
     jsr game_over_words_yet
     bcc @shown
@@ -1606,6 +1627,7 @@ ending_hint:      .byte "SELECT GAME  START PLAY", STRING_END
 story_hint:       .byte "PRESS ANY BUTTON", STRING_END
 help_hint:        .byte "B GOES BACK", STRING_END
 logo_title:       .byte "HAUNTED HOUSE", STRING_END
+subtitle_words:   .byte "BY MATCHLIGHT", STRING_END
 logo_game_over:   .byte "GAME OVER", STRING_END
 logo_ending:      .byte "YOU ESCAPED!", STRING_END
 game_word:        .byte "GAME", STRING_END

@@ -9,7 +9,8 @@
   they lead to) keeps a monster's whole picture clear of the walls;
 - stairs lead somewhere: up on one floor is down on the next, from the same room and the same cell at the
   edge, and none go off the top or bottom of the house, in games 1-8 and in game 9;
-- the player starts on open floor in room 2 of the first floor, beside the front door, and every room of
+- the player starts on open floor in room 2 of the floor with the front door, which has no stairs there
+  (its right edge is the way out), and every room of
   every floor can be reached from there without the master key, in games 3-8 and in game 9 (the locks
   only make you go round by the stairs: the original's rule);
 - the master key, where game 3 puts it, is on open floor in room 2.
@@ -58,8 +59,9 @@ def walk(start: Point, end: Point) -> list[Point]:
 
 
 class Checker:
-    def __init__(self, floors: list[M.Floor]):
+    def __init__(self, floors: list[M.Floor], ground: int = 0):
         self.floors = floors
+        self.ground = ground              # the floor with the front door
         self.problems: list[str] = []
         self.plans: dict[int, M.Plan] = {}
         self.tables: dict[int, dict[str, bytes]] = {}
@@ -242,13 +244,17 @@ class Checker:
         self.check_arrivals(number, room, other)
 
     def check_start(self) -> None:
-        walls = self.tables[0]["mansion_walls"]
-        plan = self.plans[0]
+        ground = self.ground
+        walls = self.tables[ground]["mansion_walls"]
+        plan = self.plans[ground]
         for what, (x, y) in (("the player's start", START), ("game 3's master key", GAME_3_KEY)):
             if box_hits_wall(walls, x, y, PLAYER_WIDTH, PLAYER_HEIGHT):
-                self.problem(0, f"{what} (x {x}, y {y}) is in a wall")
+                self.problem(ground, f"{what} (x {x}, y {y}) is in a wall")
             if (x // M.CELL, y // M.CELL) not in plan.rooms[START_ROOM]:
-                self.problem(0, f"{what} (x {x}, y {y}) isn't in room {START_ROOM}")
+                self.problem(ground, f"{what} (x {x}, y {y}) isn't in room {START_ROOM}")
+        floor = self.floors[ground]
+        if START_ROOM in floor.stairs or START_ROOM in floor.game9_stairs:
+            self.problem(ground, f"room {START_ROOM} has the front door: it can't have stairs too")
 
     def check_reach(self) -> None:
         for game9 in (False, True):
@@ -260,8 +266,8 @@ class Checker:
                         self.problem(number, f"room {room} can't be reached without the key ({games})")
 
     def reachable(self, game9: bool) -> set[tuple[int, int]]:
-        reached = {(0, START_ROOM)}
-        waiting = [(0, START_ROOM)]
+        reached = {(self.ground, START_ROOM)}
+        waiting = [(self.ground, START_ROOM)]
         while waiting:
             number, room = waiting.pop()
             floor = self.floors[number]
@@ -292,8 +298,9 @@ def flood(cells: set[tuple[int, int]], start: tuple[int, int]) -> set[tuple[int,
 def main() -> None:
     path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_MANSION
     with open(path) as mansion_file:
-        floors = M.parse(mansion_file.read())
-    problems = Checker(floors).run()
+        text = mansion_file.read()
+    floors = M.parse(text)
+    problems = Checker(floors, M.front_door_floor(text)).run()
     for problem in problems:
         print(problem)
     print(f"{len(floors)} floors: {'all good' if not problems else f'{len(problems)} problems'}")

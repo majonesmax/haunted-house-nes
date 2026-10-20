@@ -1234,10 +1234,16 @@ compose_status:
     clc
     adc #(1 + GREY_TEXT)
     jsr want_digit
-    lda shown_floor
-    clc
-    adc #(1 + GREY_TEXT)
+    lda shown_floor       ; the floor's number: 1 for the front door's, B below it
+    sec
+    sbc #FRONT_DOOR_FLOOR
+    bcc @below_ground
+    adc #GREY_TEXT        ; (+ 1: the carry is set)
     jsr want_digit
+    jmp list_changed_status
+@below_ground:
+    lda #('B' + GREY_TEXT)
+    jsr want_tile
     jmp list_changed_status
 
 ; Out: carry set if anything the status band shows has changed since last frame.

@@ -85,7 +85,7 @@ def main() -> None:
     machine = N.Nes(rom)
     pygame.init()
     window = pygame.display.set_mode((256 * SCALE, 240 * SCALE))
-    pygame.display.set_caption("Haunted House")
+    pygame.display.set_caption("Haunted House: By Matchlight")
     speaker = Speaker(machine.sample_rate())
     machine.recording = True
     clock = pygame.time.Clock()
