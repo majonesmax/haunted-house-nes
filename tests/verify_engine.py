@@ -13,7 +13,8 @@ cores/.
 With --shareable it checks the shareable build the same way: the model runs our own mansion (an R.Floors,
 from tools/shareable.py), floor by floor, so the new mansion has the same proof as the original.
 
-Usage: python tests/verify_engine.py [--shareable] [frames per game] [seed]   (exit code 1 on any mismatch)
+Usage: python tests/verify_engine.py [--shareable] [--ambient] [frames per game] [seed]
+(exit code 1 on any mismatch)
 """
 
 import faulthandler
@@ -26,7 +27,7 @@ REMASTER = os.path.join(os.path.dirname(ROOT), "haunted-house")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, os.path.join(REMASTER, "tools"))
 sys.path.insert(0, REMASTER)
-from build import build, labels_for, shareable_wanted  # noqa: E402
+from build import ambient_wanted, build, labels_for, shareable_wanted  # noqa: E402
 import shareable  # noqa: E402
 from nes import BUTTON_A, BUTTON_B, Nes  # noqa: E402
 import verify_player as V  # noqa: E402
@@ -82,9 +83,10 @@ class NesLab:
 def main() -> None:
     faulthandler.dump_traceback_later(WATCHDOG_SECONDS, repeat=True)   # a run that never ends says where
     our_mansion = shareable_wanted(sys.argv)
+    ambient = ambient_wanted(sys.argv)
     frames = int(sys.argv[1]) if len(sys.argv) > 1 else V.FRAMES_PER_GAME
     seed = int(sys.argv[2]) if len(sys.argv) > 2 else 0
-    rom_path = build(shareable=our_mansion)
+    rom_path = build(shareable=our_mansion, ambient=ambient)
     lab = NesLab(rom_path)
     rom = shareable.floors_rom() if our_mansion else R.load()
     tally = V.Tally()

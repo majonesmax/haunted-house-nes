@@ -12,7 +12,7 @@ import wave
 
 import numpy as np
 
-from build import build, shareable_wanted
+from build import ambient_wanted, build, shareable_wanted
 import nes as N
 from screenshot import play
 
@@ -22,8 +22,9 @@ SOUND = os.path.join(ROOT, "shots", "sound")
 
 def main() -> None:
     shareable = shareable_wanted(sys.argv)
+    ambient = ambient_wanted(sys.argv)
     name, steps = sys.argv[1], sys.argv[2:]
-    machine = N.Nes(build(shareable=shareable))
+    machine = N.Nes(build(shareable=shareable, ambient=ambient))
     machine.recording = True
     play(machine, steps)
     samples = np.concatenate(machine.sound) if machine.sound else np.zeros((0, 2), np.int16)

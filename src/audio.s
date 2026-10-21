@@ -509,7 +509,7 @@ write_voice:
 
 ; --- which song ----------------------------------------------------------------------------------------
 ; The moment's song (the remaster's music.player.moment): the win, the title or game over, dying, danger
-; (on for a while after the last monster leaves), or the floor's own.
+; (on for a while after the last monster leaves), or the floor's own (none in the ambient ROM).
 choose_song:
     lda screen_wanted
     cmp #SCREEN_STORY
@@ -558,8 +558,12 @@ choose_song:
     lda #SONG_TENSION
     jmp start_song
 @floor:
+.ifdef AMBIENT
+    lda #NO_SONG          ; the ambient ROM: no floor has a song, as the Attic has none
+.else
     ldx floor
     lda floor_songs, x
+.endif
     jmp start_song
 
 ; --- the title's storm ---------------------------------------------------------------------------------

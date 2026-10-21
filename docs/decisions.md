@@ -68,6 +68,20 @@ remaster's model of the original - every byte, every frame - so the rules are pr
 the screen or listens to the sound. The flashing, the ending's first frame in the wrong colours, and every
 game being the same game (the random numbers' seed) were all found by playing it.
 
+## 2026-10-21: An ambient ROM, with no songs on the floors
+
+**Chose:** a second shareable ROM, `haunted_house_ambient.nes` (`tools/build.py --shareable --ambient`), in
+which every floor is as the Attic has always been: no song, only the house - footsteps, matches, doors, and
+the monsters' noise. The title, the story, danger, dying and the win keep their music. The game is the same
+byte for byte; only the floor's choice of song changes (`AMBIENT` in src/audio.s).
+
+**Why:** a player who plays it on a real NES and an old TV found the floors' songs more cheerful than
+spooky, and liked the quiet Attic best. The songs follow the remaster's (more haunted-house ride than
+horror), so they stay in the main ROM; the quiet one is there for those who want the dark.
+
+**What else:** darker songs for the floors (changes the game's feel for everyone); a switch in the game
+(B + a button in play is taken, and it would need a byte of state outside the 2600's).
+
 ## 2026-10-20: The story over the dark; thunder after the title's lightning
 
 **Chose:** the story screen is black, with no lightning (as the remaster tells it); on the screens under the
