@@ -237,6 +237,7 @@ FOOTSTEPS = (98.0, [0, 0.7, 1.4, 2.1, 2.8, 3.5])   # someone crossing the floor 
 KNOCK_HISS, FOOTSTEP_HISS = 12, 15
 SHRIEK_AT = 74.0                                 # after a hush: nothing since the gust at 55
 SHRIEK = [("E6", (1, 6)), ("Bb5", (1, 0))]       # the two pulses: a note, and its arpeggio's offsets
+HAUNTING_SONG = {"haunting": {"haunting": True, "loop": True}}   # song_streams knows it by its "haunting"
 
 
 def haunting_streams() -> list[list[int]]:
@@ -375,11 +376,13 @@ def word_lines(labels: list[str]) -> list[str]:
 
 
 def all_songs() -> tuple[dict[str, dict], set[str]]:
-    """The classic soundtrack's songs, then the mansion's own (mansion/music.json); and the names of ours."""
+    """The classic soundtrack's songs, then the mansion's own: the haunting (written out here, not in the
+    remaster's notation, so not in mansion/music.json - the SNES game reads that file too), then
+    mansion/music.json's; and the names of ours."""
     with open(PACK_MUSIC) as music_file:
         songs = json.load(music_file)["songs"]
     with open(MANSION_MUSIC) as music_file:
-        ours = json.load(music_file)["songs"]
+        ours = HAUNTING_SONG | json.load(music_file)["songs"]
     return songs | ours, set(ours)
 
 
