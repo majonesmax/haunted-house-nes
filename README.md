@@ -1,6 +1,6 @@
 # Haunted House: By Matchlight
 
-A native NES game of the Atari 2600 *Haunted House* (1982): the same game, rule for rule, in a new and bigger
+A native NES game of the Atari 2600 *Haunted House* (James Andreasen, 1982): the same game, rule for rule, in a new and bigger
 mansion - a cellar and four floors - drawn the way the [Haunted House remaster](https://github.com/majonesmax/haunted-house-remastered)'s
 NES look draws it. It runs on any NES emulator, or a real NES with an MMC3 cartridge.
 
