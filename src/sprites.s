@@ -424,7 +424,9 @@ draw_hood:
     lda #KIND_LIGHT
     jmp draw_thing
 
-; The hand holding up the match, on the side the player last looked.
+; The hand holding up the match, on the side the player last looked - or on the right, against the floor's
+; left edge, where there's no room for it (the eyes reach x 4; the hand's x would go below 0 and wrap round
+; to the middle of the screen).
 draw_hand:
     lda stick
     and #(STICK_LEFT | STICK_RIGHT)
@@ -434,6 +436,9 @@ draw_hand:
     lda hand_side
     and #STICK_LEFT
     beq @right
+    lda player_x
+    cmp #HAND_OFFSET
+    bcc @right
     lda #MIRRORED
     sta draw_mirror
     lda player_x
