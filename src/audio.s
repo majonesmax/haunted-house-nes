@@ -164,6 +164,10 @@ start_song:
 is_floor_song:
     cmp #NO_SONG
     beq @no
+.ifdef AMBIENT
+    cmp #SONG_HAUNTING
+    beq @yes
+.endif
     ldy #(FLOOR_COUNT - 1)
 @floor:
     cmp floor_songs, y
@@ -509,7 +513,7 @@ write_voice:
 
 ; --- which song ----------------------------------------------------------------------------------------
 ; The moment's song (the remaster's music.player.moment): the win, the title or game over, dying, danger
-; (on for a while after the last monster leaves), or the floor's own (none in the ambient ROM).
+; (on for a while after the last monster leaves), or the floor's own (the haunting, on every floor of the ambient ROM).
 choose_song:
     lda screen_wanted
     cmp #SCREEN_STORY
@@ -559,7 +563,7 @@ choose_song:
     jmp start_song
 @floor:
 .ifdef AMBIENT
-    lda #NO_SONG          ; the ambient ROM: no floor has a song, as the Attic has none
+    lda #SONG_HAUNTING    ; the ambient ROM: every floor plays the house's sounds, not a tune
 .else
     ldx floor
     lda floor_songs, x

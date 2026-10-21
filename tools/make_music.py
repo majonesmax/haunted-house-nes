@@ -45,6 +45,17 @@ class Instrument(NamedTuple):
     volumes: list[int]       # a volume a frame from the note's start; the last is held
 
 
+def swell(loudest: int, rising: int, falling: int) -> list[int]:
+    """A volume a frame that rises to loudest over some frames and falls back to 0 over more."""
+    rise = [round(loudest * frame / rising) for frame in range(rising)]
+    fall = [round(loudest * (1 - frame / falling)) for frame in range(falling)]
+    return rise + fall + [0]
+
+
+def fade(start: int, frames: int) -> list[int]:
+    return [max(0, round(start * (1 - frame / frames))) for frame in range(frames)] + [0]
+
+
 # The instruments, numbered by their place here (src/audio.s reads them by number).
 INSTRUMENTS = {
     "lead": Instrument(1, [15, 14, 13, 12, 11, 10, 10, 9]),
@@ -57,6 +68,12 @@ INSTRUMENTS = {
     "kick": Instrument(0, [12, 9, 6, 3, 1, 0]),
     "snare": Instrument(0, [10, 7, 4, 2, 1, 0]),
     "hat": Instrument(0, [6, 2, 0]),
+    # The haunting's (the ambient ROM's floors, below): each the length of the notes that use it, ending at 0.
+    "wind": Instrument(0, swell(7, 100, 140)),
+    "sigh": Instrument(0, swell(6, 30, 60)),
+    "chime": Instrument(1, [8, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1, 0]),
+    "knock": Instrument(0, [11, 6, 3, 1, 0]),
+    "shriek": Instrument(1, [15] * 20 + fade(15, 70)),
 }
 INSTRUMENT_NUMBER = {name: number for number, name in enumerate(INSTRUMENTS)}
 DRUM_SOUNDS = {"k": ("kick", 13), "s": ("snare", 6), "h": ("hat", 1)}   # drum -> instrument, noise period
@@ -117,6 +134,8 @@ def timed(note: int, frames: int) -> list[int]:
 
 def song_streams(song: chiptune.Song) -> tuple[list[list[int]], bool]:
     """A song (as music.json writes it) arranged as the remaster's synth arranges it, as four streams."""
+    if song.get("haunting"):
+        return haunting_streams(), True
     song = {"drums": "", "style": "march", "loop": True, **song}
     timing = chiptune.Timing(song)
     step = timing.step                       # a sixteenth, in seconds
@@ -199,6 +218,63 @@ def add_drums(voice: Stream, pattern: str, start: float, step: float) -> None:
             voice.add(begin, begin + frames / FPS, period, name)
 
 
+# --- the haunting -----------------------------------------------------------------------------------------
+# The ambient ROM's one floor song (tools/build.py --ambient): no tune, only the house - a low hum that comes
+# and goes, wind, a music box somewhere far off, a sigh, knocking, footsteps on the floor above - and once a
+# loop, after a long hush, a shriek. Written in seconds; each line is (when, then what).
+HAUNTING_SECONDS = 120.0
+# The hum: (start, seconds, note). Short breaths - the triangle has no volume, so it's always at full.
+HUM = [(0, 4, "E2"), (9, 3, "F2"), (26, 5, "E2"), (39, 4, "F2"), (51, 4, "E2"),
+       (84, 4, "E2"), (95, 3, "F2"), (110, 5, "E2")]
+GUSTS = [(4, 6), (17, 7), (23, 9), (44, 5), (55, 6), (80, 8), (88, 7), (108, 5), (114, 9)]   # (start, hiss)
+GUST_SECONDS = len(INSTRUMENTS["wind"].volumes) / FPS
+MUSIC_BOX = [(36.0, 0.45, "E6 G6 B6 A6 G6 F#6 E6 . E6 G6 B6 C7 B6 . Bb6"),   # (start, seconds a note, notes)
+             (100.0, 0.6, "E6 G6 B6 A6 G6 F#6 . . . F6")]
+SIGHS = [(20.5, "B4 Bb4"), (47.5, "G4 F#4"), (112.0, "E5 Eb5")]   # (start, two notes falling a semitone)
+SIGH_SECONDS = len(INSTRUMENTS["sigh"].volumes) / FPS
+KNOCKS = (30.0, [0, 0.4, 0.8, 2.2, 2.6])        # three knocks, a wait, two more: (start, each one's offset)
+FOOTSTEPS = (98.0, [0, 0.7, 1.4, 2.1, 2.8, 3.5])   # someone crossing the floor above
+KNOCK_HISS, FOOTSTEP_HISS = 12, 15
+SHRIEK_AT = 74.0                                 # after a hush: nothing since the gust at 55
+SHRIEK = [("E6", (1, 6)), ("Bb5", (1, 0))]       # the two pulses: a note, and its arpeggio's offsets
+
+
+def haunting_streams() -> list[list[int]]:
+    voices = [Stream() for _ in range(4)]
+    for start, seconds, note in HUM:
+        voices[BASS].add(start, start + seconds, midi_of(note), "bass")
+    for start, hiss in GUSTS:
+        voices[DRUMS].add(start, start + GUST_SECONDS, hiss, "wind")
+    for start, note_seconds, notes in MUSIC_BOX:
+        for index, note in enumerate(notes.split()):
+            if note != ".":
+                when = start + index * note_seconds
+                voices[LEAD].add(when, when + note_seconds, midi_of(note), "chime")
+    for start, notes in SIGHS:
+        for index, note in enumerate(notes.split()):
+            when = start + index * SIGH_SECONDS
+            voices[HARMONY].add(when, when + SIGH_SECONDS, midi_of(note), "sigh")
+    add_taps(voices[DRUMS], KNOCKS, KNOCK_HISS)
+    add_taps(voices[DRUMS], FOOTSTEPS, FOOTSTEP_HISS)
+    add_shriek(voices)
+    return [voice.encode(HAUNTING_SECONDS) for voice in voices]
+
+
+def add_taps(voice: Stream, taps: tuple[float, list[float]], hiss: int) -> None:
+    start, offsets = taps
+    for offset in offsets:
+        voice.add(start + offset, start + offset + 0.1, hiss, "knock")
+
+
+def add_shriek(voices: list[Stream]) -> None:
+    """Both pulses at once, a tritone apart, each buzzing through its arpeggio; a crash; a thud."""
+    seconds = len(INSTRUMENTS["shriek"].volumes) / FPS
+    for voice, (note, arpeggio) in zip((voices[LEAD], voices[HARMONY]), SHRIEK):
+        voice.add(SHRIEK_AT, SHRIEK_AT + seconds, midi_of(note), "shriek", arpeggio)
+    voices[DRUMS].add(SHRIEK_AT, SHRIEK_AT + seconds, 3, "shriek")
+    voices[BASS].add(SHRIEK_AT, SHRIEK_AT + 0.4, midi_of("E1"), "bass")
+
+
 # --- the sound effects ------------------------------------------------------------------------------------
 # An effect is, for each voice it uses, a list of frames: (volume, duty or noise mode, period). Made after
 # the remaster's music/effects.py: what each sound is, in the NES's own terms.
@@ -234,10 +310,6 @@ def run(midis: list[int], frames_each: int, duty: int, volume: list[int],
 
 def noise(frames: int, period: int, volume: list[int]) -> Frames:
     return [(volume[min(frame, len(volume) - 1)], 0, period) for frame in range(frames)]
-
-
-def fade(start: int, frames: int) -> list[int]:
-    return [max(0, round(start * (1 - frame / frames))) for frame in range(frames)] + [0]
 
 
 def silence(frames: int) -> Frames:

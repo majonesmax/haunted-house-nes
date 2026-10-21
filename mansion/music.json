@@ -1,5 +1,5 @@
 {
-  "_about": "The shareable build's own songs, in the remaster's song format (its music/chiptune.py: melody tokens are eighth notes, 8 a bar), added to the classic soundtrack by tools/make_music.py; and which song each floor plays, the cellar first (null: none - the attic is the quiet floor). The faithful build plays the classic floors' songs.",
+  "_about": "The shareable build's own songs, in the remaster's song format (its music/chiptune.py: melody tokens are eighth notes, 8 a bar), added to the classic soundtrack by tools/make_music.py; and which song each floor plays, the cellar first (null: none - the attic is the quiet floor). The faithful build plays the classic floors' songs. \"haunting\" is the ambient ROM's floors' (tools/make_music.py writes it out note by note).",
   "floor_songs": [
     "cellar",
     "floor1",
@@ -8,6 +8,10 @@
     null
   ],
   "songs": {
+    "haunting": {
+      "haunting": true,
+      "loop": true
+    },
     "cellar": {
       "bpm": 72,
       "style": "creep",

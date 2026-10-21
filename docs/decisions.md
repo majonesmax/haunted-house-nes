@@ -68,19 +68,24 @@ remaster's model of the original - every byte, every frame - so the rules are pr
 the screen or listens to the sound. The flashing, the ending's first frame in the wrong colours, and every
 game being the same game (the random numbers' seed) were all found by playing it.
 
-## 2026-10-21: An ambient ROM, with no songs on the floors
+## 2026-10-21: An ambient ROM: the haunting in place of the floors' songs
 
 **Chose:** a second shareable ROM, `haunted_house_ambient.nes` (`tools/build.py --shareable --ambient`), in
-which every floor is as the Attic has always been: no song, only the house - footsteps, matches, doors, and
-the monsters' noise. The title, the story, danger, dying and the win keep their music. The game is the same
-byte for byte; only the floor's choice of song changes (`AMBIENT` in src/audio.s).
+which every floor plays the haunting instead of a tune: two minutes of the house itself, looped - a low
+hum that comes and goes, wind, a music box somewhere far off, sighs, knocking, footsteps on the floor above,
+and once a loop, after a long hush, a shriek (`tools/make_music.py`, "the haunting"). The title, the story,
+danger, dying and the win keep their music, and danger picks the haunting up where it left off. The game
+is the same; only the floor's choice of song changes (`AMBIENT` in src/audio.s). The browser page lets you
+pick either ROM.
 
 **Why:** a player who plays it on a real NES and an old TV found the floors' songs more cheerful than
 spooky, and liked the quiet Attic best. The songs follow the remaster's (more haunted-house ride than
-horror), so they stay in the main ROM; the quiet one is there for those who want the dark.
+horror), so they stay in the main ROM; the ambient one is for those who want the dark, and a fright.
 
-**What else:** darker songs for the floors (changes the game's feel for everyone); a switch in the game
-(B + a button in play is taken, and it would need a byte of state outside the 2600's).
+**What else:** plain silence on the floors, as the Attic has (tried first: too bare); darker songs for the
+floors (changes the game's feel for everyone); a switch in the game (B + a button in play is taken, and it
+would need a byte of state outside the 2600's). The triangle can't play quietly, so the hum is short
+breaths rather than a drone, or it drowns everything else.
 
 ## 2026-10-20: The story over the dark; thunder after the title's lightning
 

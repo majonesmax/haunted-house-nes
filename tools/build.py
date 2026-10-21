@@ -7,9 +7,9 @@
 
 Each build's mansion, art, ROM and labels are in its own folder; the sound is shared.
 
---ambient makes the same game with no songs on the floors, only the house's sounds (as the Attic has always
-been); the title, the story, danger, dying and the win keep theirs. It's haunted_house_ambient.nes, beside
-the other.
+--ambient makes the same game with no tunes on the floors: they play the haunting instead, the house's own
+sounds (tools/make_music.py); the title, the story, danger, dying and the win keep their songs. It's
+haunted_house_ambient.nes, beside the other.
 
 Usage: python tools/build.py [--shareable] [--ambient]
 The other tools and tests take --shareable and --ambient too (shareable_wanted, ambient_wanted below), and
@@ -71,7 +71,8 @@ def make_if_missing(made: str, tool: str, *tool_arguments: str) -> None:
 
 def build(profile: bool = False, shareable: bool = False, ambient: bool = False) -> str:
     """main.s includes the rest. A profile build tints the screen while the game works, so a screenshot
-    shows how long each part takes; an ambient build plays no songs on the floors. Returns the ROM's path."""
+    shows how long each part takes; an ambient build plays the haunting on the floors. Returns the ROM's
+    path."""
     name = "shareable" if shareable else "faithful"
     here = folder(shareable)
     art = os.path.join(here, "art")

@@ -49,35 +49,39 @@ jobs:
       - name: The mansion plays as the original does (tools/check_mansion.py)
         working-directory: haunted-house-nes
         run: python tools/check_mansion.py && python tests/test_check_mansion.py
-      - name: Build the shareable ROM
+      - name: Build the shareable ROM, and its ambient twin (the haunting on the floors)
         working-directory: haunted-house-nes
-        run: python tools/build.py --shareable
+        run: python tools/build.py --shareable && python tools/build.py --shareable --ambient
       - name: The FCEUmm core, to play it in
         working-directory: haunted-house-nes
         run: python tools/get_core.py
       - name: It boots
         working-directory: haunted-house-nes
-        run: python tests/test_boot.py --shareable
+        run: python tests/test_boot.py --shareable && python tests/test_boot.py --shareable --ambient
       - name: It plays exactly as the model says, frame by frame, never late
         working-directory: haunted-house-nes
-        run: python tests/verify_engine.py --shareable 1500 0
+        run: |
+          python tests/verify_engine.py --shareable 1500 0
+          python tests/verify_engine.py --shareable --ambient 1500 0
       - name: Its hints say what the remaster's say
         working-directory: haunted-house-nes
         run: python tests/test_hints.py --shareable 200 0
-      - name: The ROM, as this run's artifact
+      - name: The ROMs, as this run's artifact
         uses: actions/upload-artifact@v4
         with:
           name: haunted_house.nes
-          path: haunted-house-nes/build/shareable/haunted_house.nes
+          path: |
+            haunted-house-nes/build/shareable/haunted_house.nes
+            haunted-house-nes/build/shareable/haunted_house_ambient.nes
       - name: The release (on a version tag)
         if: startsWith(github.ref, 'refs/tags/v')
         working-directory: haunted-house-nes
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp build/shareable/haunted_house.nes haunted_house.nes
-          sha256sum haunted_house.nes > SHA256SUMS.txt
-          gh release create "$GITHUB_REF_NAME" haunted_house.nes SHA256SUMS.txt \
+          cp build/shareable/haunted_house.nes build/shareable/haunted_house_ambient.nes .
+          sha256sum haunted_house.nes haunted_house_ambient.nes > SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" haunted_house.nes haunted_house_ambient.nes SHA256SUMS.txt \
             --title "Haunted House: By Matchlight $GITHUB_REF_NAME" \
             --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"
 

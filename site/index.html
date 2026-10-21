@@ -68,6 +68,14 @@
     p.small { font-size: 0.9rem; color: var(--muted); margin: 0 0 10px; }
     a { color: var(--accent); }
     footer { margin-top: 24px; font-size: 0.85rem; color: var(--muted); }
+    /* The two ROMs: a pair of cards, the chosen one lit in pumpkin orange. */
+    .roms { display: grid; gap: 8px; margin-bottom: 16px; }
+    .roms label { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 8px 10px; cursor: pointer;
+      border: 1px solid var(--line); border-radius: 6px; }
+    .roms label:has(input:checked) { border-color: var(--accent); background: rgba(255, 143, 42, 0.08); }
+    .roms input { margin: 4px 0 0; accent-color: var(--accent); grid-row: span 2; align-self: start; }
+    .roms b { font-weight: 600; }
+    .roms span { font-size: 0.85rem; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -96,6 +104,13 @@
     <div class="layout">
       <div id="game-frame"><div id="game"></div></div>
       <aside>
+        <h2>ROM</h2>
+        <div class="roms">
+          <label><input type="radio" name="rom" value="music"><b>With music</b>
+            <span>Each floor has its own song.</span></label>
+          <label><input type="radio" name="rom" value="ambient"><b>Ambient</b>
+            <span>No tunes on the floors. Only the house, and whatever else is in it.</span></label>
+        </div>
         <h2>Keys</h2>
         <table>
           <tr><td><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></td><td>walk</td></tr>
@@ -112,7 +127,7 @@
           thing at a time: the scepter keeps monsters from chasing you; the master key opens locked doors.</p>
         <p class="small">Game 1 is the gentlest: the walls always show. Stairs are at the rooms' edges.</p>
         <h2>More</h2>
-        <p class="small"><a href="https://github.com/majonesmax/haunted-house-nes/releases/latest">Download the ROM</a>
+        <p class="small"><a href="https://github.com/majonesmax/haunted-house-nes/releases/latest">Download the ROMs</a>
           for any NES emulator, or a real NES with an MMC3 cartridge.</p>
         <p class="small"><a href="https://github.com/majonesmax/haunted-house-nes">How it's made</a>, on GitHub.</p>
       </aside>
@@ -124,12 +139,42 @@
     </footer>
   </main>
   <script>
+    // Which ROM: ?rom=ambient in the address, or the one chosen last time, or the one with music. Choosing the
+    // other reloads the page with it, since EmulatorJS loads one game per page.
+    const ROMS = {
+      music: { file: "haunted_house.nes", name: "Haunted House - By Matchlight" },
+      ambient: { file: "haunted_house_ambient.nes", name: "Haunted House - By Matchlight (ambient)" },
+    };
+    const ROM_KEY = "haunted-house-nes.rom";
+
+    function remembered() {
+      try { return localStorage.getItem(ROM_KEY); } catch { return null; }
+    }
+
+    function remember(choice) {
+      try { localStorage.setItem(ROM_KEY, choice); } catch { /* private window: the address still says */ }
+    }
+
+    const asked = new URLSearchParams(location.search).get("rom");
+    let choice = asked || remembered();
+    if (!(choice in ROMS)) choice = "music";
+    remember(choice);
+    for (const button of document.querySelectorAll('input[name="rom"]')) {
+      button.checked = button.value === choice;
+      button.addEventListener("change", () => {
+        remember(button.value);
+        const address = new URL(location.href);
+        address.searchParams.set("rom", button.value);
+        location.href = address.href;
+      });
+    }
+
     // EmulatorJS (https://emulatorjs.org/docs/options): the FCEUmm core, the same one the project's checks
     // play the ROM in. Button numbers for the NES: 0 B, 2 Select, 3 Start, 4-7 up, down, left, right, 8 A.
     EJS_player = "#game";
     EJS_core = "fceumm";
-    EJS_gameUrl = "haunted_house.nes";
-    EJS_gameName = "Haunted House - By Matchlight";
+    EJS_gameUrl = ROMS[choice].file;
+    EJS_gameName = ROMS[choice].name;
     EJS_pathtodata = "https://cdn.emulatorjs.org/4.2.3/data/";
     EJS_color = "#f2b33d";
     EJS_backgroundColor = "#0b0b14";
